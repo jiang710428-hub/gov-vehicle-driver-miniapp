@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 加油记录详情</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fv-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fv-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fv-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fv-nav .back-btn:active { transform: scale(0.9); }
+  .fv-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fv-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 14px 16px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .fv-body::-webkit-scrollbar { display: none; }
+
+  /* 车辆上下文条 + 状态 */
+  .ctx-card {
+    display: flex; align-items: center; gap: 11px;
+    background: #fff; border-radius: 16px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .ctx-card .ctx-plate {
+    width: 104px; height: 36px; border-radius: 9px; flex-shrink: 0;
+    background: #0A1628; color: #fff;
+    font-size: 13px; font-weight: 800; letter-spacing: 1.4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .ctx-card .ctx-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .ctx-card .ctx-t {
+    font-size: 13.5px; font-weight: 800;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ctx-card .ctx-t.ctx-code {
+    font-size: 13px; color: var(--primary); letter-spacing: .4px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .ctx-card .ctx-t.ctx-code::before {
+    content: ''; display: inline-block; vertical-align: 1px;
+    width: 7px; height: 7px; border-radius: 2.5px; margin-right: 5px;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+  }
+  .ctx-card .ctx-s {
+    font-size: 10.5px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ctx-tag {
+    flex-shrink: 0; align-self: flex-start;
+    font-size: 10.5px; font-weight: 700; border-radius: 100px; padding: 3px 9px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .ctx-tag.mine { color: var(--green-dark); background: var(--green-bg); }
+  .ctx-tag.other { color: var(--muted); background: #F1F3F8; }
+  .ctx-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .9; }
+
+  /* 表单卡 */
+  .f-card {
+    background: #fff; border-radius: 16px; padding: 14px 15px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .f-head { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+  .f-head .no {
+    width: 20px; height: 20px; border-radius: 7px; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  .f-head .t { font-size: 14.5px; font-weight: 800; letter-spacing: .3px; }
+  .f-head .sub { margin-left: auto; font-size: 10px; color: var(--faint); flex-shrink: 0; }
+
+  /* 照片网格（只读） */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo-cell {
+    aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; position: relative;
+    background: #F0F2F7; cursor: zoom-in;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .photo-cell:active { transform: scale(0.96); }
+  .photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-cell .idx {
+    position: absolute; right: 5px; bottom: 5px;
+    background: rgba(10, 22, 40, .68); color: #fff;
+    font-size: 9.5px; font-weight: 700; border-radius: 100px; padding: 1px 7px;
+    font-family: Inter, sans-serif;
+  }
+  .photo-cell .zoom {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 22, 40, 0); color: #fff;
+    transition: background .18s;
+  }
+  .photo-cell:active .zoom { background: rgba(10, 22, 40, .24); }
+  .photo-empty {
+    grid-column: 1 / -1; aspect-ratio: auto; height: 120px; border-radius: 12px;
+    background: #F5F7FA; border: 1.5px dashed #D8E0EA;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    color: var(--muted); font-size: 11.5px;
+  }
+
+  /* 信息行 */
+  .r-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 2px; }
+  .r-row + .r-row { border-top: 1px solid var(--line); }
+  .r-row .rk { width: 76px; flex-shrink: 0; font-size: 12px; color: var(--muted); line-height: 21px; }
+  .r-row .rv {
+    flex: 1; min-width: 0; text-align: right;
+    font-size: 13.5px; font-weight: 700; line-height: 1.55;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    word-break: break-all;
+  }
+  .r-row .rv.amt { color: var(--primary); font-size: 15.5px; font-weight: 800; }
+  .r-row .rv.bal { color: var(--green-dark); }
+  .r-row .rv .dchip {
+    display: inline-block; margin-left: 6px; vertical-align: 1px;
+    font-size: 9.5px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    border-radius: 100px; padding: 1.5px 7px; letter-spacing: .3px;
+  }
+  .r-row .rv.ts {
+    font-size: 12.5px; font-weight: 600; color: var(--sub);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .2px;
+  }
+
+  /* 记录人（只读行） */
+  .ro { display: flex; align-items: center; gap: 9px; padding: 9px 2px; }
+  .ro + .ro { border-top: 1px solid var(--line); }
+  .ro .rk { font-size: 12px; color: var(--muted); width: 76px; flex-shrink: 0; }
+  .ro .rv { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .ro .avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ro .rv .nm { font-size: 14px; font-weight: 700; }
+  .ro .rv .no-mono {
+    font-size: 14px; font-weight: 700; color: var(--primary);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .8px;
+  }
+  .auto-tag {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 10px; font-weight: 700; color: var(--primary);
+    background: var(--blue-bg); border-radius: 100px; padding: 3px 9px;
+  }
+
+  /* 底部操作条 */
+  .save-bar {
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px 14px;
+    background: rgba(255, 255, 255, .97);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgba(15, 42, 86, .05);
+  }
+  .submit-btn {
+    flex: 1; height: 50px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    font-family: inherit;
+    box-shadow: 0 10px 22px rgba(1, 77, 178, 0.32);
+    transition: transform .15s;
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .readonly-tip {
+    flex: 1; height: 50px; border-radius: 14px;
+    border: 1.5px solid #E4E9F1; background: #F5F7FA; color: var(--muted);
+    font-size: 12px; font-weight: 600; letter-spacing: .3px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    font-family: inherit;
+  }
+  .readonly-tip svg { flex-shrink: 0; color: #A5AEBE; }
+
+  /* ===== 大图预览 lightbox ===== */
+  .lb-mask {
+    position: absolute; inset: 0; background: rgba(5, 11, 22, .96);
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lb-mask.show { opacity: 1; pointer-events: auto; }
+  .lb-mask img {
+    max-width: 86%; max-height: 62%; border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+    object-fit: contain; background: #fff;
+  }
+  .lb-x {
+    position: absolute; top: 58px; right: 22px; width: 34px; height: 34px;
+    border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,.14); color: #fff; font-size: 15px; line-height: 34px;
+    text-align: center; padding: 0;
+  }
+  .lb-arr {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 56px; border-radius: 12px; border: none; cursor: pointer;
+    background: rgba(255,255,255,.10); color: #fff; font-size: 20px; line-height: 56px;
+    text-align: center; padding: 0; font-family: Inter, sans-serif;
+  }
+  .lb-arr.prev { left: 14px; }
+  .lb-arr.next { right: 14px; }
+  .lb-arr:disabled { opacity: .22; cursor: default; }
+  .lb-idx {
+    position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.9); font-size: 12.5px; font-weight: 600;
+    background: rgba(255,255,255,.12); border-radius: 100px; padding: 4px 14px;
+    font-family: Inter, sans-serif; letter-spacing: .5px; white-space: nowrap;
+  }
+  .lb-tip {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.45); font-size: 10px; white-space: nowrap;
+  }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 600;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">10:24</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="fv-content">
+        <div class="fv-nav">
+          <button class="back-btn" onclick="goBack()" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">加油记录详情</span>
+        </div>
+
+        <div class="fv-body">
+          <!-- 车辆上下文 + 记录归属 -->
+          <div class="ctx-card">
+            <span class="ctx-plate" id="plateChip">--</span>
+            <span class="ctx-m">
+              <span class="ctx-t" id="ctxT">加油记录详情</span>
+              <span class="ctx-s" id="ctxS">--</span>
+            </span>
+            <span class="ctx-tag mine" id="recTag">我的记录</span>
+          </div>
+
+          <!-- ① 加油照片 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">1</span><span class="t">加油照片</span><span class="sub" id="photoSub">共 0 张</span></div>
+            <div class="photo-grid" id="photoGrid"></div>
+          </div>
+
+          <!-- ② 加油信息 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">2</span><span class="t">加油信息</span></div>
+            <div class="r-row"><span class="rk">加油日期</span><span class="rv" id="rowDate">--</span></div>
+            <div class="r-row"><span class="rk">加油地点</span><span class="rv" id="rowLoc">--</span></div>
+            <div class="r-row"><span class="rk">本次加油金额</span><span class="rv amt" id="rowAmt">--</span></div>
+            <div class="r-row"><span class="rk">油卡余额</span><span class="rv bal" id="rowBal">--</span></div>
+            <div class="r-row"><span class="rk">记录创建时间</span><span class="rv ts" id="rowCreated">--</span></div>
+          </div>
+
+          <!-- ③ 记录人 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">3</span><span class="t">记录人</span><span class="sub">系统自动生成</span></div>
+            <div class="ro">
+              <span class="rk">驾驶员名称</span>
+              <span class="rv"><span class="avatar" id="avatar">张</span><span class="nm" id="whoName">--</span></span>
+            </div>
+            <div class="ro">
+              <span class="rk">记录人编号</span>
+              <span class="rv"><span class="no-mono" id="whoNo">--</span><span class="auto-tag">系统自动生成</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部操作条 -->
+        <div class="save-bar" id="bar"></div>
+      </div>
+    </div>
+
+    <!-- 大图预览 -->
+    <div class="lb-mask" id="lbMask" onclick="closeLb()">
+      <button class="lb-x" onclick="event.stopPropagation();closeLb()" aria-label="关闭">✕</button>
+      <button class="lb-arr prev" id="lbPrev" onclick="event.stopPropagation();lbNav(-1)" aria-label="上一张">‹</button>
+      <img id="lbImg" alt="加油照片大图" onclick="event.stopPropagation()">
+      <button class="lb-arr next" id="lbNext" onclick="event.stopPropagation();lbNav(1)" aria-label="下一张">›</button>
+      <span class="lb-idx" id="lbIdx">1 / 1</span>
+      <span class="lb-tip">点击空白处关闭</span>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_fuel_list';
+  /* 当前登录驾驶员（演示固定：张三） */
+  var ME = { name: '张三', no: '10086' };
+
+  var rec = null;          /* 当前查看的加油记录 */
+  var photos = [];
+  var mineR = false;
+  var lbI = 0;
+
+  /* ========== 工具 ========== */
+  function byId(id) { return document.getElementById(id); }
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function parseDate(s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function weekText(d) { return '周' + '日一二三四五六'[d.getDay()]; }
+  function todayStr() { return dstr(new Date()); }
+  function isMine(r) { return r.driverName === ME.name && r.driverNo === ME.no; }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function yuan(v) {
+    if (v === '' || v == null) return '--';
+    return '¥' + Number(v).toFixed(2);
+  }
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+
+  /* ===== 记录编号 / 创建时间元数据补全（兼容旧数据）=====
+     编号：JY + 创建日(YYYYMMDD) + 当日流水；创建时间精确到秒 */
+  function ensureMeta(list) {
+    var changed = false;
+    var max = {};
+    list.forEach(function (x) {
+      if (!x.createdAt) {
+        var i = list.indexOf(x);
+        var d = x.date || todayStr();
+        var hh = p2(8 + (i * 3) % 10), mi = p2((i * 13) % 60), ss = p2((i * 29) % 60);
+        x.createdAt = d + ' ' + hh + ':' + mi + ':' + ss;
+        changed = true;
+      }
+    });
+    list.forEach(function (x) {
+      var m = /^JY(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m) max[m[1]] = Math.max(max[m[1]] || 0, +m[2]);
+    });
+    list.forEach(function (x) {
+      if (x.code) return;
+      var day = (x.createdAt || todayStr()).slice(0, 10).replace(/-/g, '');
+      var n = (max[day] || 0) + 1; max[day] = n;
+      x.code = 'JY' + day + '-' + p2(n);
+      changed = true;
+    });
+    return changed;
+  }
+
+  /* ========== toast ========== */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = byId('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+
+  /* ========== 大图预览 ========== */
+  function openPhoto(i) {
+    if (!photos.length) return;
+    lbI = i;
+    renderLb();
+    byId('lbMask').classList.add('show');
+  }
+  function lbNav(d) {
+    if (photos.length < 2) return;
+    lbI = (lbI + d + photos.length) % photos.length;
+    renderLb();
+  }
+  function renderLb() {
+    byId('lbImg').src = photos[lbI];
+    byId('lbIdx').textContent = (lbI + 1) + ' / ' + photos.length;
+    byId('lbPrev').disabled = photos.length < 2;
+    byId('lbNext').disabled = photos.length < 2;
+  }
+  function closeLb() { byId('lbMask').classList.remove('show'); }
+
+  /* ========== 渲染 ========== */
+  function renderPhotos() {
+    var grid = byId('photoGrid');
+    byId('photoSub').textContent = '共 ' + photos.length + ' 张 · 点击查看大图';
+    if (!photos.length) {
+      grid.innerHTML =
+        '<div class="photo-empty"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="6" width="17" height="13" rx="2.5" stroke="#A5AEBE" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3" stroke="#A5AEBE" stroke-width="1.6"/></svg>该记录未上传照片</div>';
+      return;
+    }
+    var h = '';
+    photos.forEach(function (src, i) {
+      h += '<div class="photo-cell" onclick="openPhoto(' + i + ')">' +
+        '<img src="' + src + '" alt="加油照片' + (i + 1) + '">' +
+        '<span class="idx">' + (i + 1) + '</span>' +
+        '<span class="zoom"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.4" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4.4 4.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.4 11h5.2M11 8.4v5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>' +
+        '</div>';
+    });
+    grid.innerHTML = h;
+  }
+
+  function render() {
+    if (!rec) return;
+    byId('plateChip').textContent = rec.plate;
+
+    /* 顶部主标题：记录编号 */
+    var codeEl = byId('ctxT');
+    codeEl.className = 'ctx-t ctx-code';
+    codeEl.textContent = rec.code || '--';
+    byId('ctxS').textContent = '记录人 ' + rec.driverName + ' · 编号 ' + rec.driverNo;
+
+    var tag = byId('recTag');
+    if (mineR) {
+      tag.className = 'ctx-tag mine';
+      tag.textContent = '我的记录';
+    } else {
+      tag.className = 'ctx-tag other';
+      tag.textContent = '他人记录';
+    }
+
+    /* 照片 */
+    photos = (rec.photos || []).slice();
+    renderPhotos();
+
+    /* 加油信息 */
+    var d = parseDate(rec.date);
+    var ds = (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekText(d);
+    if (rec.date === todayStr()) ds += '<span class="dchip">今天</span>';
+    byId('rowDate').innerHTML = ds;
+    byId('rowLoc').textContent = rec.loc || '--';
+    byId('rowAmt').textContent = yuan(rec.amount);
+    byId('rowBal').textContent = yuan(rec.balance);
+    byId('rowCreated').textContent = rec.createdAt || '--';
+
+    /* 记录人 */
+    var nm = rec.driverName || '--';
+    byId('avatar').textContent = nm.charAt(0);
+    byId('whoName').textContent = nm;
+    byId('whoNo').textContent = rec.driverNo || '--';
+
+    /* 底部操作条：本人显示编辑按钮；他人完全隐藏，不展示说明 */
+    var bar = byId('bar');
+    if (mineR) {
+      bar.style.display = 'flex';
+      bar.innerHTML = '<button class="submit-btn" onclick="editRec()">' +
+        '<span style="letter-spacing:0">编辑这条记录</span></button>';
+    } else {
+      bar.style.display = 'none';
+      bar.innerHTML = '';
+    }
+  }
+
+  /* ========== 操作 / 返回 ========== */
+  function editRec() { location.href = 'fuel-edit.html?id=' + rec.id; }
+  function goBack() {
+    if (rec && rec.plate) { location.href = 'fuel-records.html?plate=' + encodeURIComponent(rec.plate); return; }
+    if (window.history && history.length > 1) { history.back(); return; }
+    location.href = 'vehicles.html';
+  }
+
+  /* ========== 启动 ========== */
+  (function init() {
+    var id = qs('id');
+    if (!id) {
+      toast('缺少记录参数');
+      setTimeout(function () { location.href = 'vehicles.html'; }, 900);
+      return;
+    }
+    var list = load();
+    if (ensureMeta(list)) localStorage.setItem(KEY, JSON.stringify(list));
+    list.forEach(function (x) { if (x.id === id) rec = x; });
+    if (!rec) {
+      toast('未找到该加油记录');
+      setTimeout(function () { location.href = 'vehicles.html'; }, 900);
+      return;
+    }
+    mineR = isMine(rec);
+    render();
+  })();
+</script>
+</body>
+</html>

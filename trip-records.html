@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 行车记录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-2: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --red-2: #B91C1C;
+    --red-bg: #FEF2F2;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .tr-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 页面顶部渐变背景（与首页 hero 同源配色，无卡片感） */
+  .tr-top {
+    flex-shrink: 0; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1A6FE0 0%, #0A4FB8 52%, #001645 100%);
+    color: #fff; padding-bottom: 20px;
+  }
+  .tr-top::before {
+    content: ''; position: absolute; right: -52px; top: -78px;
+    width: 200px; height: 200px; border-radius: 50%;
+    border: 26px solid rgba(255,255,255,.05); pointer-events: none;
+  }
+  .tr-top .time { color: #fff; }
+  .tr-head {
+    position: relative; z-index: 1;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 4px 22px 0;
+  }
+  .tr-head .tt { font-size: 21px; font-weight: 800; letter-spacing: .5px; line-height: 1.25; }
+  .tr-head .tt-sub { display: block; margin-top: 3px; font-size: 11px; color: rgba(255,255,255,.72); letter-spacing: .3px; }
+  .tr-head .tt-side { text-align: right; flex-shrink: 0; }
+  .tr-head .tt-side .n {
+    font-size: 19px; font-weight: 800; font-family: Inter, "Sarasa Gothic SC", sans-serif; line-height: 1.1;
+  }
+  .tr-head .tt-side .n b { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.8); margin-left: 2px; }
+  .tr-head .tt-side .lab {
+    display: block; margin-top: 3px; font-size: 10px; color: rgba(255,255,255,.6); letter-spacing: 1px;
+  }
+
+  .tr-body {
+    flex: 1; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .tr-body::-webkit-scrollbar { display: none; }
+
+  /* ===== 移动端筛选栏（吸顶，筛选条件：日期 + 车牌号） ===== */
+  .flt-bar {
+    position: sticky; top: 0; z-index: 40;
+    margin: -14px -16px 0; padding: 10px 12px;
+    background: var(--bg);
+  }
+  .flt-pair { display: flex; gap: 10px; }
+  .fp-btn {
+    flex: 1; min-width: 0; height: 52px; padding: 0 12px;
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid #E2E8F2; border-radius: 13px;
+    text-align: left; cursor: pointer; transition: all .2s;
+    box-shadow: 0 4px 12px rgba(15, 42, 86, 0.06);
+  }
+  .fp-btn .fp-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .fp-btn .fp-lab { font-size: 10.5px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+  .fp-btn .fp-val {
+    font-size: 13.5px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fp-btn .fp-val.on { color: var(--primary); }
+  .fp-btn svg { flex-shrink: 0; color: #A5AEBE; transition: color .2s; }
+  .fp-btn.on { border-color: #014DB2; background: #F2F7FF; box-shadow: 0 3px 10px rgba(1, 77, 178, 0.14); }
+  .fp-btn.on svg { color: #014DB2; }
+  .fp-btn:active { transform: scale(0.98); }
+
+  /* ===== 日期选择弹层：年月日历 ===== */
+  .cal-card { background: #F5F8FC; border-radius: 16px; padding: 12px 10px 10px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 10px; }
+  .cal-nav .cal-t { font-size: 15px; font-weight: 800; }
+  .cal-nav button {
+    width: 30px; height: 30px; border-radius: 9px; border: none; cursor: pointer;
+    background: #fff; color: #3E4756; font-size: 17px; line-height: 1;
+    box-shadow: 0 1px 4px rgba(15, 42, 86, 0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .cal-nav button:disabled { opacity: .32; cursor: default; }
+  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+  .cal-week span { text-align: center; font-size: 11px; color: var(--faint); padding: 2px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
+  .cal-day {
+    width: 40px; height: 40px; margin: 0 auto; border-radius: 50%; border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13.5px; font-weight: 600; color: var(--text); background: transparent;
+    cursor: pointer; font-family: inherit; position: relative; transition: all .15s;
+  }
+  .cal-day.off { color: #C6CEDB; cursor: default; }
+  .cal-day.today { color: var(--primary); font-weight: 800; }
+  .cal-day.today::after {
+    content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--primary);
+  }
+  .cal-day.has {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff; font-weight: 800;
+    box-shadow: 0 3px 8px rgba(1, 77, 178, 0.32);
+  }
+  .cal-day.has.off { background: #E6EBF2; color: #A6B0BF; box-shadow: none; }
+  .cal-day.cur { box-shadow: 0 0 0 2px #7FB0F0; }
+  .cal-day.has.cur { box-shadow: 0 0 0 3px #014DB2, 0 3px 8px rgba(1, 77, 178, 0.32); }
+  .cal-note {
+    margin-top: 10px; font-size: 10.5px; color: var(--faint);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .cal-note i {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+  }
+
+  /* ===== 车牌号选择弹层：单选列表 ===== */
+  .plate-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px; }
+  .plate-row {
+    display: flex; align-items: center; gap: 12px; padding: 11px 13px;
+    border-radius: 14px; background: #F5F7FA; border: 1px solid transparent;
+    cursor: pointer; transition: all .15s;
+  }
+  .plate-row:active { transform: scale(0.985); }
+  .plate-row.on { background: #EAF2FF; border-color: #A9CBF5; }
+  .plate-row .ptx { flex: 1; min-width: 0; }
+  .plate-row .ptx b { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+  .plate-row.on .ptx b { color: var(--primary); }
+  .plate-row .ptx span {
+    display: block; margin-top: 2px; font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .plate-row .radio {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid #C8D2E0;
+    flex-shrink: 0; position: relative; transition: all .15s;
+  }
+  .plate-row.on .radio { border-color: var(--primary); }
+  .plate-row.on .radio::after {
+    content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary);
+  }
+
+  /* ===== 底部弹层（移动端 half-sheet） ===== */
+  .mask {
+    position: absolute; inset: 0; background: rgba(7, 15, 30, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity .28s; z-index: 300;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 310;
+    background: #fff; border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform .32s cubic-bezier(.32, .72, .28, 1);
+    box-shadow: 0 -12px 40px rgba(7, 15, 30, 0.18);
+    display: flex; flex-direction: column; max-height: 66%;
+    padding-bottom: 18px;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sh-handle { height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .sh-handle::before {
+    content: ''; width: 38px; height: 4px; border-radius: 2px; background: #E2E7EE;
+  }
+  .sh-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 18px 12px;
+  }
+  .sh-head .t { font-size: 17px; font-weight: 800; }
+  .sh-head .reset {
+    border: none; background: transparent; color: var(--primary);
+    font-size: 13px; font-weight: 700; cursor: pointer; padding: 6px 8px;
+  }
+  .sh-head .reset:disabled { color: #B6BFCC; }
+  .sh-body {
+    overflow-y: auto; padding: 0 18px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  /* 空态重置按钮 */
+  .empty-btn {
+    height: 36px; padding: 0 22px; border-radius: 100px;
+    border: 1px solid #C9D6EA; background: #fff; color: var(--primary);
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+
+  /* 日期分组 */
+  .day-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 18px;
+    padding: 0 2px 10px;
+  }
+  #tripList .day-head:first-child { margin-top: 0; }
+  .day-head .cal {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #E4EEFB, #D3E4F7);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .day-head .d-txt { font-size: 13.5px; font-weight: 700; }
+  .day-head .d-txt .weak { font-weight: 500; color: var(--muted); font-size: 11.5px; margin-left: 5px; }
+  .day-head .d-flag {
+    font-size: 10px; font-weight: 700; border-radius: 100px; padding: 2px 8px;
+    background: var(--blue-bg); color: var(--primary); flex-shrink: 0;
+  }
+  .day-head .d-flag.yest { background: #F3F4F6; color: var(--sub); }
+  .day-head .d-cnt { margin-left: auto; font-size: 11px; color: var(--faint); flex-shrink: 0; }
+
+  /* 行程卡 */
+  .trip-card {
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    cursor: pointer; transition: transform .12s, box-shadow .2s;
+  }
+  .trip-card:hover { box-shadow: 0 8px 22px rgba(15, 42, 86, 0.10); }
+  .trip-card:active { transform: scale(0.985); }
+  .trip-card + .trip-card { margin-top: 10px; }
+
+  /* 记录编号条（行程卡头部） */
+  .tc-no {
+    display: flex; align-items: center; gap: 7px;
+    padding-bottom: 10px; margin-bottom: 11px;
+    border-bottom: 1px dashed #EEF0F5;
+  }
+  .tc-no .no-ic {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #EAF1FC, #DCECFB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tc-no .no-lab { font-size: 10px; color: var(--faint); letter-spacing: .6px; flex-shrink: 0; }
+  .tc-no .no-val {
+    flex: 1; min-width: 0;
+    font-size: 12.5px; font-weight: 800; letter-spacing: .5px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tc-no .no-go {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #F1F3F8; color: #9AA5B5;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .trip-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px;
+  }
+  .trip-grid .cell { min-width: 0; }
+  .trip-grid .cell.wide { grid-column: span 2; }
+  .trip-grid .cell .k { font-size: 10px; color: var(--faint); letter-spacing: .5px; display: block; }
+  .trip-grid .cell .v {
+    font-size: 13px; font-weight: 700; margin-top: 3px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .trip-grid .cell .v em {
+    font-style: normal; font-size: 9.5px; font-weight: 500; color: var(--muted); margin-left: 2px;
+  }
+  .trip-grid .cell .v.blue { color: var(--primary); }
+  .trip-grid .cell .v.wrap { white-space: normal; line-height: 1.25; font-size: 12.5px; }
+  .trip-grid .cell .v .sub {
+    display: block; font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 2px;
+  }
+
+  .ck-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; font-weight: 700; border-radius: 100px; padding: 2px 8px;
+  }
+  .ck-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; }
+  .ck-badge.ok { background: var(--green-bg); color: var(--green-2); }
+  .ck-badge.ok::before { background: var(--green); }
+  .ck-badge.bad { background: var(--red-bg); color: var(--red-2); }
+  .ck-badge.bad::before { background: var(--red); }
+
+  /* 空态 */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 20px; color: var(--muted); gap: 10px;
+  }
+  .empty .eico {
+    width: 60px; height: 60px; border-radius: 50%; background: #F0F2F7;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .etxt { font-size: 13px; }
+
+  /* TabBar */
+  .tabbar { flex-shrink: 0; padding: 10px 16px 20px; background: var(--bg); position: relative; z-index: 5; }
+  .tab-pill {
+    background: #fff; border-radius: 38px; height: 66px;
+    display: flex; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+    padding: 5px; border: 1px solid rgba(15,77,178,.05);
+  }
+  .tab {
+    flex: 1; border-radius: 30px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; cursor: pointer;
+    transition: all .25s; color: #8A94A6; font-size: 10.5px;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    color: #fff; font-weight: 600;
+    box-shadow: 0 6px 14px rgba(1, 77, 178, 0.32);
+  }
+  .tab svg { display: block; }
+
+  /* toast */
+  .toast {
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(10, 22, 40, 0.88); color: #fff; font-size: 13px;
+    padding: 9px 18px; border-radius: 100px; opacity: 0; pointer-events: none;
+    transition: all .3s; white-space: nowrap; z-index: 320;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="page">
+    <div class="tr-top">
+      <div class="statusbar">
+        <span class="time">15:50</span>
+        <div class="capsule">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+      </div>
+      <div class="tr-head">
+        <div>
+          <span class="tt">工作记录</span>
+          <span class="tt-sub">您的用车行车记录</span>
+        </div>
+        <div class="tt-side">
+          <span class="lab">全部行程</span>
+          <span class="n"><i id="thTotal" style="font-style:normal">7</i><b>次</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tr-content">
+      <div class="tr-body">
+        <!-- 移动端筛选栏（吸顶）：两个独立条件按钮 日期 / 车牌号 -->
+        <div class="flt-bar">
+          <div class="flt-pair">
+            <button type="button" class="fp-btn" id="dateBtn" onclick="openDateSheet()">
+              <span class="fp-tx">
+                <span class="fp-lab">用车日期</span>
+                <span class="fp-val" id="dateVal">不限日期</span>
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="fp-btn" id="plateBtn" onclick="openPlateSheet()">
+              <span class="fp-tx">
+                <span class="fp-lab">车牌号</span>
+                <span class="fp-val" id="plateVal">全部车辆</span>
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 日期分组行程列表 -->
+        <div id="tripList"></div>
+      </div>
+    </div>
+
+    <!-- 底部标签栏 -->
+    <div class="tabbar">
+      <div class="tab-pill">
+        <div class="tab" data-tab="0" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 7.5L9 2l6.5 5.5V15a1 1 0 01-1 1h-4v-5H7.5v5h-4a1 1 0 01-1-1V7.5z" fill="currentColor"/></svg>
+          <span>首页</span>
+        </div>
+        <div class="tab" data-tab="1" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 6l4-3h5l4 3v8a1 1 0 01-1 1h-11a1 1 0 01-1-1V6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="10" r="2" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>车辆</span>
+        </div>
+        <div class="tab active" data-tab="2" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="2.5" width="12" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 6.5h6M6 9.5h6M6 12.5h3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>工作记录</span>
+        </div>
+        <div class="tab" data-tab="3" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 15.5a6.2 6.2 0 0112.4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>我的</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 筛选遮罩 + 底部弹层（日期 / 车牌号 各自独立） -->
+  <div class="mask" id="mask" onclick="closeSheet()"></div>
+
+  <!-- 日期选择弹层：年月日历 -->
+  <div class="sheet" id="sheetDate">
+    <div class="sh-handle"></div>
+    <div class="sh-head">
+      <span class="t">选择用车日期</span>
+      <button class="reset" id="dateReset" onclick="clearDate()" disabled>不限日期</button>
+    </div>
+    <div class="sh-body">
+      <div class="cal-card">
+        <div class="cal-nav">
+          <button type="button" id="calPrev" onclick="calNav(-1)">‹</button>
+          <span class="cal-t" id="calTitle">2026年9月</span>
+          <button type="button" id="calNext" onclick="calNav(1)">›</button>
+        </div>
+        <div class="cal-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="cal-note"><i></i>蓝色日期为有行车记录</div>
+    </div>
+  </div>
+
+  <!-- 车牌号选择弹层：单选列表 -->
+  <div class="sheet" id="sheetPlate">
+    <div class="sh-handle"></div>
+    <div class="sh-head">
+      <span class="t">选择车牌号</span>
+      <button class="reset" id="plateReset" onclick="clearPlate()" disabled>全部车辆</button>
+    </div>
+    <div class="sh-body">
+      <div class="plate-list" id="plateList"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  var TRIPS = [
+    { date:'2026-09-02', dM:'9月2日', flag:'今天', weak:'周三', cardDate:'09-02 周三',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'07:10', end:'07:58', sKm:12560, eKm:12580,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    { date:'2026-09-01', dM:'9月1日', flag:'昨天', weak:'周二', cardDate:'09-01 周二',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'08:20', end:'18:05', sKm:12310, eKm:12560,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    { date:'2026-08-30', dM:'8月30日', flag:'', weak:'周日', cardDate:'08-30 周日',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'张三',
+      start:'09:30', end:'17:20', sKm:13100, eKm:13340,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'王五' },
+    { date:'2026-08-28', dM:'8月28日', flag:'', weak:'周五', cardDate:'08-28 周五',
+      plate:'苏A·54321', model:'奥迪 A6L 45TFSI', driver:'张三',
+      start:'08:15', end:'12:30', sKm:11020, eKm:11160,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'赵六' },
+    { date:'2026-08-26', dM:'8月26日', flag:'', weak:'周三', cardDate:'08-26 周三',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'08:30', end:'18:20', sKm:11800, eKm:12110,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'李四' },
+    { date:'2026-08-21', dM:'8月21日', flag:'', weak:'周五', cardDate:'08-21 周五',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'张三',
+      start:'13:00', end:'14:20', sKm:23600, eKm:23650,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'孙七' },
+    /* 演示行程：接车检查 / 使用过程异常 / 还车检查 三步全异常 */
+    { date:'2026-08-18', dM:'8月18日', flag:'', weak:'周二', cardDate:'08-18 周二',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'张三',
+      start:'09:10', end:'11:35', sKm:23520, eKm:23580,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'吴九' }
+  ];
+
+  /* ===== 记录编号自动生成：GZ + 用车日期(YYYYMMDD) + 当日行程流水(2 位，自 01 起) =====
+     每个行程进入工作记录后由系统自动生成，无需手动填写 */
+  (function autoNo() {
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    var seen = {};
+    TRIPS.forEach(function (t) {
+      var day = t.date.replace(/-/g, '');
+      seen[day] = (seen[day] || 0) + 1;
+      t.no = 'GZ' + day + '-' + pad(seen[day]);
+    });
+  })();
+
+  function fmt(n) { return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  function badgeCheck(v) {
+    var cls = v === '正常' ? 'ok' : 'bad';
+    return '<span class="ck-badge ' + cls + '">' + v + '</span>';
+  }
+
+  /* ===== 筛选状态与选项（两个条件：用车日期 + 车牌号） ===== */
+  var FILT = { date: '', plate: '' };
+  var dateOpts = [], plateOpts = [];
+  TRIPS.forEach(function (t) {
+    if (!plateOpts.some(function (p) { return p === t.plate; })) plateOpts.push(t.plate);
+    if (!dateOpts.some(function (o) { return o.v === t.date; })) dateOpts.push({ v: t.date, l: t.dM });
+  });
+
+  function renderTrips(list) {
+    document.getElementById('thTotal').textContent = list.length;
+    var html = '', lastDate = '';
+    if (list.length === 0) {
+      document.getElementById('tripList').innerHTML =
+        '<div class="empty"><div class="eico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="#9AA5B5" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="#9AA5B5" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="etxt">没有找到符合条件的行程</span><button class="empty-btn" onclick="resetAll()">重置筛选</button></div>';
+      return;
+    }
+    list.forEach(function (t) {
+      if (t.date !== lastDate) {
+        lastDate = t.date;
+        var cnt = list.filter(function (x) { return x.date === t.date; }).length;
+        html += '<div class="day-head">' +
+          '<span class="cal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="#014DB2" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/></svg></span>' +
+          '<span class="d-txt">' + t.dM + '<span class="weak">' + t.weak + '</span></span>' +
+          (t.flag ? '<span class="d-flag' + (t.flag === '昨天' ? ' yest' : '') + '">' + t.flag + '</span>' : '') +
+          '<span class="d-cnt">' + cnt + ' 次行程</span>' +
+        '</div>';
+      }
+      html +=
+        '<div class="trip-card" onclick="openTrip(' + TRIPS.indexOf(t) + ')">' +
+          '<div class="tc-no">' +
+            '<span class="no-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h12A1.5 1.5 0 0 1 19.5 5v16l-3-1.6-3 1.6-3-1.6-3 1.6V5A1.5 1.5 0 0 1 6 3.5z" stroke="#014DB2" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.8 8.5h6.4M8.8 12h6.4" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/></svg></span>' +
+            '<span class="no-lab">记录编号</span>' +
+            '<span class="no-val">' + t.no + '</span>' +
+            '<span class="no-go"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          '</div>' +
+          '<div class="trip-grid">' +
+            '<div class="cell"><span class="k">本次驾驶员</span><span class="v">' + t.driver + '</span></div>' +
+            '<div class="cell"><span class="k">开始用车时间</span><span class="v">' + t.start + '</span></div>' +
+            '<div class="cell"><span class="k">结束用车时间</span><span class="v">' + t.end + '</span></div>' +
+            '<div class="cell"><span class="k">当日使用车辆</span><span class="v wrap">' + t.plate + '<span class="sub">' + t.model + '</span></span></div>' +
+            '<div class="cell"><span class="k">上次驾驶员</span><span class="v">' + t.lastDriver + '</span></div>' +
+            '<div class="cell"><span class="k">开始公里</span><span class="v">' + fmt(t.sKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">结束公里</span><span class="v">' + fmt(t.eKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">本次里程</span><span class="v blue">' + fmt(t.eKm - t.sKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">接车检查</span><span class="v">' + badgeCheck(t.check) + '</span></div>' +
+            '<div class="cell"><span class="k">还车检查</span><span class="v">' + badgeCheck(t.returnCheck) + '</span></div>' +
+            '<div class="cell"><span class="k">使用过程异常</span><span class="v">' + badgeCheck(t.exception) + '</span></div>' +
+          '</div>' +
+        '</div>';
+    });
+    document.getElementById('tripList').innerHTML = html;
+  }
+
+  /* ===== 筛选交互（双条件按钮：日期 → 日历弹层 / 车牌号 → 列表弹层） ===== */
+  var CAL = { y: 2026, m: 8 };          /* 日历当前视图（m 为 0 基：8 = 9月） */
+  var TODAY = { y: 2026, m: 8, d: 2 };  /* 演示基准"今天"2026-09-02，与列表 flag 一致 */
+  var hasDates = [];
+  dateOpts.forEach(function (o) { hasDates[o.v] = true; });
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function dateStr(y, m, d) { return y + '-' + pad2(m + 1) + '-' + pad2(d); }
+
+  /* —— 弹层开关 —— */
+  var curSheet = null;
+  function showSheet(id) {
+    curSheet = id;
+    var s1 = document.getElementById('sheetDate'); if (s1) s1.classList.remove('show');
+    var s2 = document.getElementById('sheetPlate'); if (s2) s2.classList.remove('show');
+    document.getElementById('mask').classList.add('show');
+    document.getElementById(id).classList.add('show');
+  }
+  function openDateSheet() {
+    if (curSheet === 'sheetDate') { closeSheet(); return; }
+    buildCal(); showSheet('sheetDate');
+  }
+  function openPlateSheet() {
+    if (curSheet === 'sheetPlate') { closeSheet(); return; }
+    renderPlateList(); showSheet('sheetPlate');
+  }
+  function closeSheet() {
+    document.getElementById('mask').classList.remove('show');
+    var s1 = document.getElementById('sheetDate'); if (s1) s1.classList.remove('show');
+    var s2 = document.getElementById('sheetPlate'); if (s2) s2.classList.remove('show');
+    curSheet = null;
+  }
+
+  /* —— 日期弹层：年月日历 —— */
+  function calNav(delta) {
+    CAL.m += delta;
+    if (CAL.m < 0) { CAL.m = 11; CAL.y--; }
+    if (CAL.m > 11) { CAL.m = 0; CAL.y++; }
+    /* 不允许翻到今天之后 */
+    if (CAL.y > TODAY.y || (CAL.y === TODAY.y && CAL.m > TODAY.m)) { CAL.y = TODAY.y; CAL.m = TODAY.m; }
+    buildCal();
+  }
+  function buildCal() {
+    document.getElementById('calTitle').textContent = CAL.y + '年' + (CAL.m + 1) + '月';
+    var prev = document.getElementById('calPrev');
+    prev.disabled = (CAL.y === 2026 && CAL.m === 0);
+    var next = document.getElementById('calNext');
+    next.disabled = (CAL.y === TODAY.y && CAL.m === TODAY.m);
+    var first = new Date(CAL.y, CAL.m, 1).getDay();
+    var days = new Date(CAL.y, CAL.m + 1, 0).getDate();
+    var todayStr = dateStr(TODAY.y, TODAY.m, TODAY.d);
+    var cells = '', d, s, cls, dis;
+    for (var i = 0; i < 42; i++) {
+      d = i - first + 1;
+      if (d < 1 || d > days) { cells += '<span class="cal-day off"></span>'; continue; }
+      s = dateStr(CAL.y, CAL.m, d);
+      cls = 'cal-day';
+      if (s > todayStr) { cls += ' off'; dis = ' disabled'; }
+      else { dis = ''; }
+      if (hasDates[s]) cls += ' has';
+      else if (s === todayStr) cls += ' today';
+      if (s === FILT.date) cls += ' cur';
+      cells += '<button type="button" class="' + cls + '"' + dis + ' onclick="pickDate(' + CAL.y + ',' + CAL.m + ',' + d + ')">' + d + '</button>';
+    }
+    document.getElementById('calGrid').innerHTML = cells;
+  }
+  function pickDate(y, m0, d) {
+    var s = dateStr(y, m0, d);
+    FILT.date = (s === FILT.date) ? '' : s;
+    closeSheet();
+    applyFilter();
+  }
+  function clearDate() { FILT.date = ''; closeSheet(); applyFilter(); }
+
+  /* —— 车牌号弹层：单选列表 —— */
+  function renderPlateList() {
+    var h = plateRowHtml('', '全部车辆', '不限车牌号');
+    plateOpts.forEach(function (p) {
+      var model = '';
+      TRIPS.forEach(function (t) { if (t.plate === p && !model) model = t.model; });
+      h += plateRowHtml(p, p, model);
+    });
+    document.getElementById('plateList').innerHTML = h;
+  }
+  function plateRowHtml(v, name, sub) {
+    var on = (FILT.plate === v) ? ' on' : '';
+    return '<div class="plate-row' + on + '" onclick="pickPlate(\'' + v + '\')">' +
+      '<div class="ptx"><b>' + name + '</b><span>' + sub + '</span></div>' +
+      '<i class="radio"></i></div>';
+  }
+  function pickPlate(v) {
+    FILT.plate = (v === FILT.plate) ? '' : v;
+    closeSheet();
+    applyFilter();
+  }
+  function clearPlate() { FILT.plate = ''; closeSheet(); applyFilter(); }
+
+  /* 空态「重置筛选」入口 */
+  function resetAll() {
+    FILT.date = ''; FILT.plate = '';
+    closeSheet();
+    applyFilter();
+  }
+
+  function updateChrome() {
+    var db = document.getElementById('dateBtn');
+    var dv = document.getElementById('dateVal');
+    if (FILT.date) {
+      var p = FILT.date.split('-');
+      dv.textContent = parseInt(p[1], 10) + '月' + parseInt(p[2], 10) + '日';
+    } else { dv.textContent = '不限日期'; }
+    dv.classList.toggle('on', !!FILT.date);
+    db.classList.toggle('on', !!FILT.date);
+
+    var pb = document.getElementById('plateBtn');
+    var pv = document.getElementById('plateVal');
+    pv.textContent = FILT.plate || '全部车辆';
+    pv.classList.toggle('on', !!FILT.plate);
+    pb.classList.toggle('on', !!FILT.plate);
+
+    var dr = document.getElementById('dateReset'); if (dr) dr.disabled = !FILT.date;
+    var pr = document.getElementById('plateReset'); if (pr) pr.disabled = !FILT.plate;
+  }
+
+  function applyFilter() {
+    var list = TRIPS.filter(function (t) {
+      if (FILT.date && t.date !== FILT.date) return false;
+      if (FILT.plate && t.plate !== FILT.plate) return false;
+      return true;
+    });
+    renderTrips(list);
+    updateChrome();
+  }
+
+  /* 打开行程详情 */
+  function openTrip(i) {
+    location.href = 'trip-detail.html?id=' + i;
+  }
+
+  /* 底部标签栏 */
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+  }
+
+  function goTab(el) {
+    var idx = el.dataset.tab;
+    if (idx === '0') { location.href = 'home.html'; return; }
+    if (idx === '1') { location.href = 'vehicles.html'; return; }
+    if (idx === '2') return; /* 当前已在工作记录 */
+    if (idx === '3') { location.href = 'my.html'; return; }
+  }
+
+  buildCal();
+  renderPlateList();
+  applyFilter();
+</script>
+
+</body>
+</html>

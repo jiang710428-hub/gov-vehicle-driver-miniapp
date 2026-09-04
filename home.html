@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 首页</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --primary-deep: #001645;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+    --green-bg: #F0FDF4;
+    --yellow-bg: #FEF3C7;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 12px;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  /* 手机外框 */
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  /* 状态栏 */
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  /* ===== 首页 ===== */
+  .home-content {
+    flex: 1; overflow-y: auto; padding: 6px 12px 14px;
+    display: flex; flex-direction: column; gap: 12px;
+    scrollbar-width: none;
+  }
+  .home-content::-webkit-scrollbar { display: none; }
+
+  /* Hero */
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1A6FE0 0%, #0A4FB8 50%, #001645 100%);
+    border-radius: 18px; padding: 16px;
+    color: #fff;
+    box-shadow: 0 14px 30px rgba(1, 77, 178, 0.30);
+    display: flex; align-items: center; gap: 12px;
+    min-height: 104px;
+  }
+  .hero::before {
+    content: ''; position: absolute; right: -48px; top: -58px;
+    width: 170px; height: 170px; border-radius: 50%;
+    border: 22px solid rgba(255,255,255,.055);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: ''; position: absolute; right: 80px; bottom: -70px;
+    width: 130px; height: 130px; border-radius: 50%;
+    border: 16px solid rgba(255,255,255,.045);
+    pointer-events: none;
+  }
+  .hero-left {
+    display: flex; align-items: center; gap: 12px;
+    min-width: 0; flex: 1 1 auto; z-index: 1;
+  }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+    background: linear-gradient(135deg, #93C5FD 0%, #3B7FE8 60%, #1E5BC6 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700; color: #fff;
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: 0 6px 16px rgba(0,0,0,.22);
+    letter-spacing: -.5px;
+  }
+  .hero-main {
+    display: flex; flex-direction: column; gap: 5px; min-width: 0;
+  }
+  .hero-name { font-size: 17px; font-weight: 700; letter-spacing: .5px; line-height: 1.2; }
+  .hero-emp { font-size: 12px; color: rgba(255,255,255,.75); line-height: 1.2; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,.18); border-radius: 100px;
+    padding: 3px 9px; font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,.16);
+    line-height: 1.2;
+  }
+  .status-badge .pdot {
+    width: 5px; height: 5px; border-radius: 50%; background: #34D399;
+    box-shadow: 0 0 0 2.5px rgba(52,211,153,.32);
+    flex-shrink: 0;
+  }
+  .hero-vehicle {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    flex-shrink: 0; z-index: 1; min-width: 0;
+  }
+  .hero-vehicle .lbl { font-size: 11px; color: rgba(255,255,255,.6); letter-spacing: 1px; }
+  .hero-vehicle .plate {
+    font-size: 21px; font-weight: 800; letter-spacing: 1px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    text-shadow: 0 2px 8px rgba(0,0,0,.25);
+    line-height: 1.15;
+  }
+  .hero-vehicle .model { font-size: 11.5px; color: rgba(255,255,255,.78); }
+
+  /* 卡片 */
+  .card {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    box-shadow: 0 4px 16px rgba(15, 77, 178, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .card .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sec-title { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; }
+  .sec-title .tick {
+    width: 4px; height: 15px; border-radius: 2px;
+    background: linear-gradient(180deg, #0A5FD4, #014DB2);
+  }
+  .sec-head .more {
+    font-size: 12px; color: var(--muted); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 4px 8px; border-radius: 100px; transition: background .15s;
+  }
+  .sec-head .more:active { background: #F1F3F8; }
+
+  /* 今日工作状态 */
+  .work-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .w-cell {
+    background: #F7F9FC; border-radius: 10px;
+    padding: 10px 4px; display: flex; flex-direction: column;
+    align-items: center; gap: 5px; text-align: center;
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .w-cell .v {
+    font-size: 14px; font-weight: 700; white-space: nowrap;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .w-cell .v.green { color: var(--green); }
+  .w-cell .v.amber { color: var(--amber); }
+  .w-cell .k {
+    font-size: 11px; color: var(--sub); letter-spacing: .2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%; line-height: 1.3;
+  }
+
+  /* 快捷功能 */
+  .func-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 8px; }
+  .func-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+  .func-item .ibox {
+    width: 50px; height: 50px; border-radius: 15px; position: relative;
+    background: linear-gradient(180deg, #F4F8FF 0%, #E8F1FE 100%);
+    border: 1px solid rgba(1,77,178,.07);
+    box-shadow: 0 4px 10px rgba(1,77,178,.08);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .func-item .ibox.yellow {
+    background: linear-gradient(180deg, #FFFAEE 0%, #FDF0D5 100%);
+    border-color: rgba(245,158,11,.14);
+    box-shadow: 0 4px 10px rgba(245,158,11,.10);
+  }
+  .func-item:active .ibox { transform: scale(0.92); }
+  .func-item .flabel { font-size: 12px; color: var(--text); font-weight: 500; }
+
+  .badge {
+    position: absolute; top: -5px; right: -5px; width: 18px; height: 18px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.16);
+  }
+  .badge.done { background: var(--green); }
+  .badge.todo { background: var(--amber); }
+
+  /* TabBar */
+  .tabbar { flex-shrink: 0; padding: 10px 16px 20px; }
+  .tab-pill {
+    background: #fff; border-radius: 38px; height: 66px;
+    display: flex; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+    padding: 5px; border: 1px solid rgba(15,77,178,.05);
+  }
+  .tab {
+    flex: 1; border-radius: 30px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; cursor: pointer;
+    transition: all .25s; color: #8A94A6; font-size: 10.5px;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    color: #fff; font-weight: 600;
+    box-shadow: 0 6px 14px rgba(1, 77, 178, 0.32);
+  }
+  .tab svg { display: block; }
+
+  /* toast */
+  .toast {
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(10, 22, 40, 0.88); color: #fff; font-size: 13px;
+    padding: 9px 18px; border-radius: 100px; opacity: 0; pointer-events: none;
+    transition: all .3s; white-space: nowrap; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <div class="page" id="page-home">
+    <div class="statusbar">
+      <span class="time">9:41</span>
+      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+
+    <div class="home-content">
+      <div class="hero">
+        <div class="hero-left">
+          <div class="avatar">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.1" r="4.3" fill="rgba(255,255,255,.95)"/><path d="M4.4 20a7.6 7.6 0 0115.2 0" fill="rgba(255,255,255,.95)"/></svg>
+          </div>
+          <div class="hero-main">
+            <span class="hero-name">张三</span>
+            <span class="hero-emp">工号：10086</span>
+            <span class="status-badge"><span class="pdot"></span>工作中</span>
+          </div>
+        </div>
+        <div class="hero-vehicle">
+          <span class="lbl">当前用车</span>
+          <span class="plate">苏A·12345</span>
+          <span class="model">丰田 凯美瑞（黑色）</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="tick"></span>当前用车信息</div>
+          <span class="more" onclick="location.href='work-status.html'">更多 ›</span>
+        </div>
+        <div class="work-grid">
+          <div class="w-cell"><span class="v">08:15</span><span class="k">开始用车时间</span></div>
+          <div class="w-cell"><span class="v green">已完成</span><span class="k">车辆检查</span></div>
+          <div class="w-cell" onclick="location.href='start-mileage.html'"><span class="v">12580km</span><span class="k">起始公里数</span></div>
+          <div class="w-cell"><span class="v">0 km</span><span class="k">本次用车里程</span></div>
+          <div class="w-cell" onclick="location.href='exception-report.html'"><span class="v green">无</span><span class="k">异常上报</span></div>
+          <div class="w-cell"><span class="v">19:30</span><span class="k">结束用车时间</span></div>
+          <div class="w-cell"><span class="v">--</span><span class="k">结束里程</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head"><div class="sec-title" style="margin-bottom:0">快捷功能</div></div>
+        <div class="func-grid">
+          <div class="func-item" onclick="location.href='checkin.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#014DB2" stroke-width="1.6"/><rect x="11.1" y="7" width="1.8" height="6" rx="0.9" fill="#014DB2"/></svg>
+              <span class="badge done"><svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="flabel">开始用车</span>
+          </div>
+          <div class="func-item" onclick="location.href='vehicle-select.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="9" rx="3" stroke="#014DB2" stroke-width="1.6"/><circle cx="6" cy="15" r="2" fill="#014DB2"/><circle cx="14" cy="15" r="2" fill="#014DB2"/><path d="M6 5h12l3 3H3l3-3z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <span class="badge done"><svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="flabel">选择车辆</span>
+          </div>
+          <div class="func-item" onclick="location.href='vehicle-check.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke="#014DB2" stroke-width="1.6"/><path d="M9 7h6" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/><rect x="9" y="14.6" width="6" height="1.4" rx="0.7" fill="#014DB2"/></svg>
+              <span class="badge done"><svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="flabel">车辆检查</span>
+          </div>
+          <div class="func-item" onclick="location.href='start-mileage.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="14" r="8" stroke="#014DB2" stroke-width="1.6"/><rect x="11.1" y="7" width="1.8" height="5" rx="0.9" fill="#014DB2"/><path d="M12 10.5l3.5 3.5" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="badge done"><svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="flabel">起始里程</span>
+          </div>
+          <div class="func-item" onclick="location.href='exception-report.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l9 15H3l9-15z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><rect x="11.1" y="10" width="1.8" height="5" rx="0.9" fill="#014DB2"/><circle cx="12" cy="16.8" r="1.3" fill="#014DB2"/></svg>
+              <span class="badge todo"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="8" y="4.1" width="2" height="5.2" rx="1" fill="#fff"/><circle cx="9" cy="12.5" r="1.4" fill="#fff"/></svg></span>
+            </div>
+            <span class="flabel">异常上报</span>
+          </div>
+          <div class="func-item" onclick="location.href='checkout.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="#014DB2" stroke-width="1.6"/><rect x="11.1" y="9" width="1.8" height="6" rx="0.9" fill="#014DB2"/><path d="M9 12h6" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="badge todo"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="8" y="4.1" width="2" height="5.2" rx="1" fill="#fff"/><circle cx="9" cy="12.5" r="1.4" fill="#fff"/></svg></span>
+            </div>
+            <span class="flabel">结束用车</span>
+          </div>
+          <div class="func-item" onclick="location.href='end-mileage.html'">
+            <div class="ibox">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="7" stroke="#014DB2" stroke-width="1.6"/><rect x="11.1" y="4" width="1.8" height="5.5" rx="0.9" fill="#014DB2"/></svg>
+              <span class="badge todo"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="8" y="4.1" width="2" height="5.2" rx="1" fill="#fff"/><circle cx="9" cy="12.5" r="1.4" fill="#fff"/></svg></span>
+            </div>
+            <span class="flabel">结束里程</span>
+          </div>
+          <div class="func-item" onclick="location.href='trip-records.html'">
+            <div class="ibox yellow">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="#F59E0B" stroke-width="1.6"/><rect x="8" y="8.6" width="8" height="1.4" rx="0.7" fill="#F59E0B"/><rect x="8" y="12.6" width="8" height="1.4" rx="0.7" fill="#F59E0B"/><rect x="8" y="16.6" width="5" height="1.4" rx="0.7" fill="#F59E0B"/></svg>
+            </div>
+            <span class="flabel">工作记录</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="tabbar">
+      <div class="tab-pill" id="tab-pill">
+        <div class="tab active" data-tab="0" onclick="switchTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 7.5L9 2l6.5 5.5V15a1 1 0 01-1 1h-4v-5H7.5v5h-4a1 1 0 01-1-1V7.5z" fill="currentColor"/></svg>
+          <span>首页</span>
+        </div>
+        <div class="tab" data-tab="1" onclick="switchTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 6l4-3h5l4 3v8a1 1 0 01-1 1h-11a1 1 0 01-1-1V6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="10" r="2" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>车辆</span>
+        </div>
+        <div class="tab" data-tab="2" onclick="switchTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="2.5" width="12" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 6.5h6M6 9.5h6M6 12.5h3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>工作记录</span>
+        </div>
+        <div class="tab" data-tab="3" onclick="switchTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 15.5a6.2 6.2 0 0112.4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>我的</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+  }
+
+  function switchTab(el) {
+    var idx = el.dataset.tab;
+    if (idx === '1') { location.href = 'vehicles.html'; return; }
+    if (idx === '2') { location.href = 'trip-records.html'; return; }
+    if (idx === '3') { location.href = 'my.html'; return; }
+    if (idx === '0') return; /* 当前已在首页 */
+  }
+</script>
+
+</body>
+</html>

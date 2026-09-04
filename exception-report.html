@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 异常上报</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 12px;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  /* 手机外框 */
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  /* 状态栏 */
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  /* 内容 */
+  .er-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .er-content::-webkit-scrollbar { display: none; }
+  .er-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid #EEF0F5;
+  }
+  .er-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .er-nav .back-btn:active { transform: scale(0.9); }
+  .er-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+  .er-body { flex: 1; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* 步骤进度 */
+  .step-head {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .step-head .snum {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+  .step-head .stxt { flex: 1; min-width: 0; }
+  .step-head .stxt .t { font-size: 14px; font-weight: 700; }
+  .step-head .stxt .s { font-size: 11px; color: var(--muted); }
+  .step-bar { width: 84px; height: 6px; border-radius: 3px; background: #E5EAF3; overflow: hidden; flex-shrink: 0; }
+  .step-bar > span { display: block; height: 100%; width: 71%; border-radius: 3px; background: linear-gradient(90deg, #0A5FD4, #4C8DF0); }
+
+  /* 状态徽章 */
+  .status-badge {
+    font-size: 11.5px; font-weight: 600; border-radius: 100px; padding: 3px 9px;
+    border: 1px solid transparent;
+  }
+  .status-badge.ok { color: var(--green-dark); background: var(--green-bg); border-color: #A7F3D0; }
+  .status-badge.pending { color: var(--amber); background: #FFFBEB; border-color: #FDE68A; }
+  .status-badge.loading { color: var(--primary); background: var(--blue-bg); border-color: #D6E6FA; }
+
+  /* 卡片 */
+  .er-card {
+    background: #fff; border-radius: 16px; padding: 15px 16px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .card-head .h3 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .card-head .h3 .ico {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .required::after { content: ' *'; color: var(--red); font-weight: 700; }
+
+  /* 信息表 */
+  .info-table { border-top: 1px solid var(--line); }
+  .info-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8.5px 0; font-size: 13px;
+  }
+  .info-row + .info-row { border-top: 1px solid #F5F7FA; }
+  .info-row .label { color: var(--sub); }
+  .info-row .value { color: var(--text); font-weight: 600; }
+  .info-row .value.plate { font-weight: 800; letter-spacing: .5px; font-family: Inter, "Sarasa Gothic SC", sans-serif; }
+
+  /* 车辆信息（图文横排） */
+  .veh-body { display: flex; gap: 12px; align-items: stretch; }
+  .veh-thumb {
+    width: 92px; flex-shrink: 0; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line); background: #F0F2F7;
+  }
+  .veh-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .veh-body .info-table { flex: 1; min-width: 0; align-self: center; }
+
+  /* 驾驶员信息（紧凑横排） */
+  .drv-body { display: flex; align-items: center; gap: 11px; }
+  .drv-avatar {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .drv-text { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .drv-name { font-size: 15px; font-weight: 800; }
+  .drv-no { font-size: 12px; color: var(--sub); font-weight: 500; }
+
+  /* GPS 定位 */
+  .loc-body { display: flex; gap: 12px; }
+  .loc-pin {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: var(--blue-bg); display: flex; align-items: center; justify-content: center;
+  }
+  .loc-text { flex: 1; min-width: 0; }
+  .loc-text .addr {
+    font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.5;
+    word-break: break-all;
+  }
+  .loc-text .time { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+  /* 异常类型 */
+  .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+  .er-card.hide { display: none; }
+  .type-item {
+    flex: 1; border: 1.5px solid #E2E8F0; border-radius: 13px;
+    background: #FAFBFD; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 13px 6px 11px;
+    transition: border-color .2s, background .2s, transform .15s;
+  }
+  .type-item:active { transform: scale(0.97); }
+  .type-item .t-ico {
+    width: 40px; height: 40px; border-radius: 13px;
+    background: #fff; box-shadow: 0 3px 9px rgba(15,42,86,.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .type-item .t-name { font-size: 12.5px; font-weight: 700; color: var(--sub); }
+  .type-item .t-desc { font-size: 10px; color: var(--faint); }
+  .type-item.on {
+    border-color: var(--primary); background: #F3F8FF;
+    box-shadow: 0 0 0 3px rgba(1, 77, 178, .10);
+  }
+  .type-item.on .t-name { color: var(--primary); }
+  .type-tip { font-size: 11px; color: var(--faint); margin-top: 9px; line-height: 1.6; }
+
+  /* 异常照片（多张） */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .photo-cell {
+    aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; position: relative;
+    border: 1.5px dashed #CBD5E1; background: #F0F2F7; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s;
+  }
+  .photo-cell:active { transform: scale(0.97); }
+  .photo-cell .ph {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted);
+  }
+  .photo-cell .ph .cam-box {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    box-shadow: 0 3px 8px rgba(15,42,86,.10);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-cell .ph .txt { font-size: 10.5px; font-weight: 600; color: var(--sub); }
+  .photo-cell.has { border-style: solid; border-color: #C6D2E4; }
+  .photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-cell .del {
+    position: absolute; right: 5px; top: 5px;
+    width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(10, 22, 40, .62); color: #fff; font-size: 12px; line-height: 20px;
+    display: none; text-align: center; padding: 0;
+  }
+  .photo-cell.has .del { display: block; }
+  .photo-count { font-size: 11.5px; color: var(--muted); margin-top: 9px; }
+  .photo-count b { color: var(--primary); }
+
+  /* 异常说明 */
+  .desc-input {
+    width: 100%; min-height: 96px; border-radius: 12px; resize: none; outline: none;
+    border: 1.5px solid #E2E8F0; background: #F5F7FA;
+    padding: 11px 13px; font-size: 13px; line-height: 1.6; color: var(--text);
+    font-family: inherit;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .desc-input::placeholder { color: var(--faint); }
+  .desc-input:focus {
+    border-color: var(--primary); background: #fff;
+    box-shadow: 0 0 0 3px rgba(1, 77, 178, .12);
+  }
+  .desc-count { text-align: right; font-size: 10.5px; color: var(--faint); margin-top: 6px; }
+
+  /* 提交按钮 */
+  .submit-btn {
+    margin-top: 4px; height: 48px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    box-shadow: 0 10px 22px rgba(1, 77, 178, 0.32);
+    transition: transform .15s, opacity .2s;
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled {
+    background: #C9D4E3; box-shadow: none; cursor: not-allowed;
+  }
+  .submit-tip {
+    text-align: center; font-size: 11px; color: var(--faint); margin-top: 8px;
+  }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .88); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="page">
+    <div class="statusbar">
+      <span class="time">10:24</span>
+      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+
+    <div class="er-content">
+      <div class="er-nav">
+        <button class="back-btn" onclick="location.href='home.html'" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="title">异常上报</span>
+      </div>
+
+      <div class="er-body">
+        <!-- 步骤进度 -->
+        <div class="step-head">
+          <span class="snum">5</span>
+          <div class="stxt">
+            <div class="t">异常上报</div>
+            <div class="s">第 5 步 · 共 7 步</div>
+          </div>
+          <div class="step-bar"><span></span></div>
+        </div>
+
+        <!-- 车辆信息 -->
+        <div class="er-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 11l1.3-3.3A2 2 0 0 1 8.2 6.4h7.6a2 2 0 0 1 1.9 1.3L19 11M5 11h14a1.5 1.5 0 0 1 1.5 1.5V16a1 1 0 0 1-1 1h-1.2M5 11a1.5 1.5 0 0 0-1.5 1.5V16a1 1 0 0 0 1 1h1.2m0 0h12.6M6.5 17v1.4a1 1 0 0 0 1 1h.6a1 1 0 0 0 1-1V17m6.8 0v1.4a1 1 0 0 0 1 1h.6a1 1 0 0 0 1-1V17" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              车辆信息
+            </span>
+          </div>
+          <div class="veh-body">
+            <div class="veh-thumb"><img src="img/car-camry.png" alt="车辆照片"></div>
+            <div class="info-table">
+              <div class="info-row"><span class="label">车牌号</span><span class="value plate">苏A·12345</span></div>
+              <div class="info-row"><span class="label">品牌型号</span><span class="value">丰田 凯美瑞 2.5G</span></div>
+              <div class="info-row"><span class="label">车身颜色</span><span class="value">黑色</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 驾驶员信息（紧凑横排） -->
+        <div class="er-card">
+          <div class="drv-body">
+            <div class="drv-avatar">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="3.6" stroke="#014DB2" stroke-width="1.7"/><path d="M5.5 19.5c0-3.4 2.9-6 6.5-6s6.5 2.6 6.5 6" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </div>
+            <div class="drv-text">
+              <span class="drv-name">张三</span>
+              <span class="drv-no">工号 10086</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GPS 定位 -->
+        <div class="er-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-6.5-5.2-6.5-10a6.5 6.5 0 1 1 13 0c0 4.8-6.5 10-6.5 10z" stroke="#014DB2" stroke-width="1.7"/><circle cx="12" cy="10.5" r="2.4" stroke="#014DB2" stroke-width="1.7"/></svg>
+              </span>
+              GPS定位
+            </span>
+          </div>
+          <div class="loc-body">
+            <div class="loc-pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-6.5-5.2-6.5-10a6.5 6.5 0 1 1 13 0c0 4.8-6.5 10-6.5 10z" stroke="#014DB2" stroke-width="1.8"/><circle cx="12" cy="10.5" r="2.6" stroke="#014DB2" stroke-width="1.8"/></svg>
+            </div>
+            <div class="loc-text">
+              <div class="addr" id="locAddr">正在获取当前位置…</div>
+              <div class="time" id="locTime">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 异常类型 -->
+        <div class="er-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 4l9 15H3l9-15z" stroke="#014DB2" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 10v4" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.1" fill="#014DB2"/></svg>
+              </span>
+              <span class="required">异常类型</span>
+            </span>
+          </div>
+          <div class="type-grid">
+            <div class="type-item on" id="type-none" onclick="setType('none')">
+              <div class="t-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.2" stroke="#014DB2" stroke-width="1.7"/><path d="M8.4 12.2l2.5 2.5 4.7-5.2" stroke="#014DB2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="t-name">无</span>
+              <span class="t-desc">本次行程无异常</span>
+            </div>
+            <div class="type-item" id="type-accident" onclick="setType('accident')">
+              <div class="t-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 15l2.5-6A2 2 0 0 1 8.3 7.8h7.4a2 2 0 0 1 1.8 1.2L20 15" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="15" width="18" height="4" rx="1.5" stroke="#014DB2" stroke-width="1.6"/><path d="M6.5 19v1.6M17.5 19v1.6M8 11.5h8" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </div>
+              <span class="t-name">事故</span>
+              <span class="t-desc">交通事故碰撞</span>
+            </div>
+            <div class="type-item" id="type-damage" onclick="setType('damage')">
+              <div class="t-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19l7-14 3.5 7L16 9l4 10H4z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 15.5l1.5 1.5 2-2.5 1.5 2 1.5-1.5" stroke="#014DB2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="t-name">车辆损坏</span>
+              <span class="t-desc">部件损坏故障</span>
+            </div>
+            <div class="type-item" id="type-other" onclick="setType('other')">
+              <div class="t-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="2" stroke="#014DB2" stroke-width="1.6"/><circle cx="12" cy="5.5" r="2" stroke="#014DB2" stroke-width="1.6"/><circle cx="12" cy="18.5" r="2" stroke="#014DB2" stroke-width="1.6"/><path d="M6.8 11l3.4-4.3M6.8 13l3.4 4.3M14 6.7l3.5 3.8M14 17.3l3.5-3.8" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </div>
+              <span class="t-name">其他</span>
+              <span class="t-desc">其他异常情况</span>
+            </div>
+          </div>
+          <div class="type-tip">默认「无」表示本次行程无异常；如发生异常，请如实选择异常类型并补充材料。</div>
+        </div>
+
+        <!-- 上传异常照片 -->
+        <div class="er-card" id="photoCard">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>
+              </span>
+              <span class="required">上传异常照片</span>
+            </span>
+          </div>
+          <div class="photo-grid" id="photoGrid">
+            <div class="photo-cell" id="addCell" onclick="document.getElementById('photoFile').click()">
+              <div class="ph">
+                <div class="cam-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>
+                </div>
+                <span class="txt">点击拍摄</span>
+              </div>
+            </div>
+          </div>
+          <div class="photo-count">已上传 <b id="photoNum">0</b> / 9 张 · 支持相机拍摄或从相册选择</div>
+          <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="onPhoto(this)">
+        </div>
+
+        <!-- 异常说明 -->
+        <div class="er-card" id="descCard">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13z" stroke="#014DB2" stroke-width="1.6"/><path d="M8 9h8M8 12.5h8M8 16h5" stroke="#014DB2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </span>
+              <span class="required">填写异常说明</span>
+            </span>
+          </div>
+          <textarea class="desc-input" id="descInput" maxlength="200" placeholder="请描述异常发生的时间、地点、经过及影响情况…" oninput="onDescInput()"></textarea>
+          <div class="desc-count"><span id="descNum">0</span> / 200</div>
+        </div>
+
+        <!-- 提交 -->
+        <button class="submit-btn" id="submitBtn" disabled onclick="submitReport()">提交异常上报</button>
+        <div class="submit-tip">选择「无」可直接提交；其他类型需上传异常照片并填写异常说明（5-200 字）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+  var TYPE_NAME = { none: '无', accident: '事故', damage: '车辆损坏', other: '其他' };
+  var curType = 'none';
+  var photos = [];   /* 最多 9 张 */
+  var MAX_PHOTOS = 9;
+
+  /* toast */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById('toastEl');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+
+  function fmtTime(d) {
+    d = d || new Date();
+    var p = function (n) { return n < 10 ? '0' + n : n; };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  /* 初始：默认「无」，隐藏异常照片与说明 */
+  setType('none');
+
+  /* GPS 自动定位（模拟） */
+  setTimeout(function () {
+    document.getElementById('locAddr').textContent = '江苏省南京市建邺区新城大道智慧新城中心大厦';
+    document.getElementById('locTime').textContent = '定位时间：' + fmtTime() + ' · 精确度约 10 米';
+  }, 1300);
+
+  /* 异常类型 */
+  function setType(t) {
+    curType = t;
+    ['none', 'accident', 'damage', 'other'].forEach(function (k) {
+      document.getElementById('type-' + k).className = 'type-item' + (k === t ? ' on' : '');
+    });
+    var no = t === 'none';
+    document.getElementById('photoCard').classList.toggle('hide', no);
+    document.getElementById('descCard').classList.toggle('hide', no);
+    refreshSubmit();
+  }
+
+  /* 照片 */
+  function onPhoto(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (photos.length >= MAX_PHOTOS) { toast('最多上传 ' + MAX_PHOTOS + ' 张照片'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      photos.push(e.target.result);
+      renderPhotos();
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removePhoto(i) {
+    photos.splice(i, 1);
+    renderPhotos();
+  }
+
+  function renderPhotos() {
+    var grid = document.getElementById('photoGrid');
+    grid.innerHTML = '';
+    photos.forEach(function (src, i) {
+      var cell = document.createElement('div');
+      cell.className = 'photo-cell has';
+      cell.innerHTML =
+        '<img src="' + src + '" alt="异常照片' + (i + 1) + '">' +
+        '<button class="del" onclick="event.stopPropagation();removePhoto(' + i + ')">✕</button>';
+      grid.appendChild(cell);
+    });
+    if (photos.length < MAX_PHOTOS) {
+      var add = document.createElement('div');
+      add.className = 'photo-cell';
+      add.id = 'addCell';
+      add.onclick = function () { document.getElementById('photoFile').click(); };
+      add.innerHTML =
+        '<div class="ph">' +
+          '<div class="cam-box">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>' +
+          '</div>' +
+          '<span class="txt">点击拍摄</span>' +
+        '</div>';
+      grid.appendChild(add);
+    }
+    document.getElementById('photoNum').textContent = photos.length;
+    refreshSubmit();
+  }
+
+  /* 异常说明 */
+  function onDescInput() {
+    document.getElementById('descNum').textContent = document.getElementById('descInput').value.length;
+    refreshSubmit();
+  }
+
+  /* 提交校验 */
+  function refreshSubmit() {
+    if (curType === 'none') {
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    }
+    var desc = document.getElementById('descInput').value.trim();
+    var ok = photos.length > 0 && desc.length >= 5;
+    document.getElementById('submitBtn').disabled = !ok;
+  }
+
+  function submitReport() {
+    if (!curType) { toast('请选择异常类型'); return; }
+    if (curType === 'none') {
+      toast('本次行程无异常，已提交');
+      setTimeout(function () { location.href = 'home.html'; }, 1400);
+      return;
+    }
+    if (!photos.length) { toast('请拍摄至少 1 张异常照片'); return; }
+    var desc = document.getElementById('descInput').value.trim();
+    if (desc.length < 5) { toast('请填写异常说明（至少 5 个字）'); return; }
+
+    toast('异常上报已提交（' + TYPE_NAME[curType] + '）');
+    setTimeout(function () { location.href = 'home.html'; }, 1400);
+  }
+</script>
+</body>
+</html>

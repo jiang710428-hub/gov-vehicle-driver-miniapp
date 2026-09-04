@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 车辆异常档案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-2: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --red-2: #B91C1C;
+    --red-bg: #FEF2F2;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fl-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fl-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fl-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fl-nav .back-btn:active { transform: scale(0.9); }
+  .fl-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fl-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 13px 16px 36px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .fl-body::-webkit-scrollbar { display: none; }
+
+  /* 通用状态徽章 */
+  .st {
+    font-size: 10px; font-weight: 700; border-radius: 100px; padding: 2.5px 8px;
+    border: 1px solid transparent; flex-shrink: 0; white-space: nowrap;
+  }
+  .st.bad { color: var(--red-2); background: var(--red-bg); border-color: #FECACA; }
+  .st.ok { color: var(--green-2); background: var(--green-bg); border-color: #A7F3D0; }
+
+  /* ===== 顶部工具区：搜索（驾驶员/记录编号）+ 单日日期筛选（与车辆使用日志顶部一致） ===== */
+  .log-bar {
+    background: #fff; border-radius: 14px; padding: 11px 12px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .lb-row { display: flex; align-items: center; gap: 9px; }
+  .lb-srch {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+    height: 38px; padding: 0 6px 0 11px;
+    background: #F5F7FA; border: 1px solid transparent; border-radius: 10px;
+    transition: border-color .15s, background .15s;
+  }
+  .lb-srch:focus-within { background: #fff; border-color: #C9D8EC; }
+  .lb-srch svg { flex-shrink: 0; color: var(--faint); }
+  .lb-srch input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-size: 12.5px; color: var(--text); font-family: inherit;
+  }
+  .lb-srch input::placeholder { color: var(--faint); }
+  .lb-srch .sr-clr {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: none;
+    background: #E4E9F1; color: var(--muted); cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1;
+  }
+  .lb-srch.has .sr-clr { display: inline-flex; }
+
+  .lb-date {
+    flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+    height: 38px; padding: 0 12px; font-family: inherit;
+    background: #fff; border: 1px solid #E4E9F1; border-radius: 10px;
+    cursor: pointer; color: var(--text);
+    transition: border-color .15s, background .15s;
+  }
+  .lb-date:active { transform: scale(.97); }
+  .lb-date .ic { display: flex; color: var(--muted); }
+  .lb-date .tx { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lb-date .chev { display: flex; color: var(--faint); }
+  .lb-date .d-clr {
+    display: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; color: var(--primary);
+    align-items: center; justify-content: center; font-size: 9px; line-height: 1;
+  }
+  .lb-date.on { border-color: var(--primary); background: #EFF6FF; }
+  .lb-date.on .tx { color: var(--primary); }
+  .lb-date.on .chev { display: none; }
+  .lb-date.on .d-clr { display: flex; }
+
+  /* ===== 底部弹层：选择用车日期（单日） ===== */
+  .date-mask {
+    position: absolute; inset: 0; z-index: 90;
+    display: flex; align-items: flex-end;
+    background: rgba(9, 17, 34, 0.52);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .date-mask.show { opacity: 1; pointer-events: auto; }
+  .date-sheet {
+    width: 100%; background: #fff;
+    border-radius: 20px 20px 0 0; padding: 18px 16px 20px;
+    box-shadow: 0 -10px 40px rgba(9, 17, 34, 0.12);
+    transform: translateY(105%); transition: transform .26s cubic-bezier(.33, .8, .3, 1);
+  }
+  .date-mask.show .date-sheet { transform: translateY(0); }
+  .ds-head { display: flex; align-items: center; justify-content: space-between; }
+  .ds-head .t { font-size: 15px; font-weight: 800; }
+  .hd-r { display: flex; align-items: center; gap: 8px; }
+  .ds-close {
+    width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer;
+    background: #F0F2F7; color: var(--muted); font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ds-nav { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+  .ds-nav .nav-btn {
+    width: 32px; height: 32px; border-radius: 9px; border: none; cursor: pointer;
+    background: #F5F7FA; color: var(--text); font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ds-nav .nav-btn:active { background: #E8EDF5; }
+  .ds-nav .ym { min-width: 112px; text-align: center; font-size: 15px; font-weight: 800; letter-spacing: .3px; }
+  .today-btn {
+    height: 30px; padding: 0 13px; border-radius: 100px; border: none; cursor: pointer;
+    background: #EFF6FF; color: var(--primary); font-size: 12px; font-weight: 700; font-family: inherit;
+  }
+  .today-btn:active { background: #DFEDFF; }
+  .ds-week { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 14px; }
+  .ds-week span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); padding: 2px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 4px; }
+  .cal-cell {
+    height: 40px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    border-radius: 10px; cursor: pointer; position: relative;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .cal-cell:active { background: #EEF3FB; }
+  .cal-cell.dim { color: #C6CDD9; font-weight: 500; cursor: default; }
+  .cal-cell.tday::after {
+    content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--primary);
+  }
+  .cal-cell.sel {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    box-shadow: 0 4px 10px rgba(1, 77, 178, 0.3);
+  }
+  .cal-cell.sel::after { display: none; }
+  .ds-foot { margin-top: 12px; display: flex; }
+  .ds-foot .clr {
+    flex: 1; height: 42px; border-radius: 12px; border: none; cursor: pointer;
+    background: #F3F5F9; color: var(--sub); font-size: 13.5px; font-weight: 800; font-family: inherit;
+    transition: background .15s;
+  }
+  .ds-foot .clr:active { background: #E8EDF5; }
+  .ds-foot .clr.off { color: #C2C9D6; cursor: default; background: #F7F8FB; }
+
+  /* ===== 异常记录卡（编号条样式与工作记录/车辆日志一致） ===== */
+  .trip-card {
+    background: #fff; border-radius: 14px; padding: 12px 14px 13px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    cursor: pointer; transition: transform .12s, box-shadow .2s;
+  }
+  .trip-card:hover { box-shadow: 0 8px 22px rgba(15, 42, 86, 0.10); }
+  .trip-card:active { transform: scale(0.985); }
+
+  /* 异常记录卡列表容器：卡片之间留出间距 */
+  #abnList { display: flex; flex-direction: column; gap: 12px; }
+
+  .tc-no {
+    display: flex; align-items: center; gap: 7px;
+    padding-bottom: 10px; margin-bottom: 10px;
+    border-bottom: 1px dashed #EEF0F5;
+  }
+  .tc-no .no-ic {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #FEE2E2, #FAD5D5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tc-no .no-lab { font-size: 10px; color: var(--faint); letter-spacing: .6px; flex-shrink: 0; }
+  .tc-no .no-val {
+    flex: 1; min-width: 0;
+    font-size: 12.5px; font-weight: 800; letter-spacing: .5px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tc-no .no-go {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #F1F3F8; color: #9AA5B5;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 卡内 meta（日期 / 驾驶员 / 用车时间 / 里程） */
+  .abn-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .abn-meta .am-d { font-size: 13.5px; font-weight: 800; }
+  .abn-meta .am-d .wk { font-weight: 500; color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .abn-meta .am-x {
+    font-size: 10.5px; color: var(--sub); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .abn-meta .am-x::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: #D3DAE4; }
+  .abn-meta .am-km { color: var(--primary); font-family: Inter, sans-serif; }
+
+  /* 异常分类明细行 */
+  .abn-rows { border-radius: 10px; background: #FBFCFE; border: 1px solid #F0F2F6; padding: 2px 11px; }
+  .abn-row { display: flex; align-items: flex-start; gap: 9px; padding: 9px 0; }
+  .abn-row + .abn-row { border-top: 1px dashed #EEF0F5; }
+  .r-ic {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+    background: linear-gradient(135deg, #F87171, #EF4444); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .r-mid { flex: 1; min-width: 0; }
+  .r1 { display: flex; align-items: center; gap: 6px; width: 100%; font-size: 12.5px; font-weight: 800; color: var(--red-2); }
+  .r1 b.hl {
+    font-style: normal; font-size: 10px; font-weight: 800; color: var(--red-2);
+    background: var(--red-bg); border: 1px solid #FECACA;
+    border-radius: 100px; padding: 1.5px 7px; flex-shrink: 0;
+  }
+  .r1 i {
+    font-style: normal; font-size: 10px; font-weight: 700; color: var(--sub);
+    background: #F1F3F8; border-radius: 100px; padding: 1.5px 7px; flex-shrink: 0;
+    margin-left: auto;
+  }
+  .r2 {
+    display: block; font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.55;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* 空态 */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 52px 20px; color: var(--muted); gap: 10px;
+  }
+  .empty .eico {
+    width: 64px; height: 64px; border-radius: 50%; background: #F0F2F7;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .etxt { font-size: 13.5px; font-weight: 700; color: var(--sub); }
+  .empty .esub { font-size: 11px; color: var(--muted); line-height: 1.7; text-align: center; }
+  .empty .empty-btn {
+    margin-top: 10px; height: 36px; padding: 0 24px; border-radius: 100px;
+    border: none; background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 14px rgba(1, 77, 178, 0.28);
+  }
+  .empty .empty-btn.ghost {
+    background: #fff; color: var(--primary);
+    border: 1px solid #C9D8EC; box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="page">
+    <div class="statusbar">
+      <span class="time">15:50</span>
+      <div class="capsule">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+
+    <div class="fl-content">
+      <div class="fl-nav">
+        <button class="back-btn" onclick="goBack()" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="title">车辆异常档案</span>
+      </div>
+
+      <div class="fl-body">
+        <!-- 顶部工具区：搜索（驾驶员/记录编号）+ 单日日期筛选（与车辆使用日志一致） -->
+        <div class="log-bar">
+          <div class="lb-row">
+            <div class="lb-srch" id="srchBox">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              <input type="text" id="kwInp" placeholder="搜索驾驶员 / 记录编号" autocomplete="off">
+              <button type="button" class="sr-clr" id="kwClr" onclick="clearKw()">✕</button>
+            </div>
+            <button type="button" class="lb-date" id="dateBtn" onclick="openDateSheet()">
+              <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="tx" id="dateTxt">用车日期</span>
+              <span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="d-clr" id="dateClear" onclick="event.stopPropagation();clearDate()">✕</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 异常记录列表（该车存在异常的行程，点卡进详情） -->
+        <div id="abnList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部弹层：选择用车日期（单日筛选） -->
+  <div class="date-mask" id="dateMask" onclick="closeDateSheet()">
+    <div class="date-sheet" onclick="event.stopPropagation()">
+      <div class="ds-head">
+        <span class="t">选择用车日期</span>
+        <div class="hd-r">
+          <button type="button" class="today-btn" onclick="calToday()">今天</button>
+          <button type="button" class="ds-close" onclick="closeDateSheet()" aria-label="关闭">✕</button>
+        </div>
+      </div>
+      <div class="ds-nav">
+        <button type="button" class="nav-btn" onclick="calMove(-1)">‹</button>
+        <span class="ym" id="calYM"></span>
+        <button type="button" class="nav-btn" onclick="calMove(1)">›</button>
+      </div>
+      <div class="ds-week">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="ds-foot">
+        <button type="button" class="clr off" id="clrDate" onclick="clearDate()">清除日期筛选</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===== 行程台账：与「行程详情 / 车辆使用日志」同源同序（id 对应全局 index，含异常明细字段） =====
+     车辆异常档案 = 这台车工作记录中 车辆检查 / 异常上报 / 结束里程 存在异常的数据记录 */
+  var TRIPS = [
+    { date:'2026-09-02', dM:'9月2日', flag:'今天', weak:'周三', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'张三', start:'07:10', end:'07:58', sKm:12560, eKm:12580,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-09-01', dM:'9月1日', flag:'昨天', weak:'周二', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'张三', start:'08:20', end:'18:05', sKm:12310, eKm:12560,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-30', dM:'8月30日', flag:'', weak:'周日', plate:'苏A·67890', model:'大众 迈腾 330TSI',
+      driver:'张三', start:'09:30', end:'17:20', sKm:13100, eKm:13340,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'王五',
+      chkExPos:'左前', chkExCat:'划痕', chkExDesc:'出车前 360° 环视检查发现左前保险杠下沿存在约 8cm 划痕，判定为接车检查异常，已拍照留档并上报调度中心。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'事故', excDesc:'行驶至江北大道红绿灯路口时被后方车辆轻微追尾，无人员受伤，已按要求报警并报备调度中心。',
+      rtExPos:'正后', rtExCat:'凹陷', rtExDesc:'还车 360° 环视检查确认尾部保险杠被追尾位置存在约 10cm 凹陷及漆面剥落，与使用过程上报事故位置一致，判定为还车检查异常，拍照留档随记录上报。' },
+    { date:'2026-08-28', dM:'8月28日', flag:'', weak:'周五', plate:'苏A·54321', model:'奥迪 A6L 45 TFSI',
+      driver:'张三', start:'08:15', end:'12:30', sKm:11020, eKm:11160,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'赵六',
+      chkExPos:'正后', chkExCat:'划痕', chkExDesc:'交接车辆时发现尾部保险杠右下方存在约 15cm 划痕，已拍摄留档并上报。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'事故', excDesc:'行驶至新街口地下停车场出口时与立柱发生轻微剐蹭，右前轮眉漆面受损，无人员受伤，已现场拍照并报备调度中心。',
+      rtExPos:'右前', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查确认右前轮眉剐蹭处存在约 5cm 划痕，与使用过程上报事故位置一致，判定为还车检查异常，拍照留档随记录上报。' },
+    { date:'2026-08-26', dM:'8月26日', flag:'', weak:'周三', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'张三', start:'08:30', end:'18:20', sKm:11800, eKm:12110,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'李四',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-21', dM:'8月21日', flag:'', weak:'周五', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'张三', start:'13:00', end:'14:20', sKm:23600, eKm:23650,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'孙七',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    /* 演示行程：接车（重点检查项目异常）/ 使用过程（异常上报）/ 还车（360°环视异常）三步全异常 */
+    { date:'2026-08-18', dM:'8月18日', flag:'', weak:'周二', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'张三', start:'09:10', end:'11:35', sKm:23520, eKm:23580,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'吴九',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'车容车貌', chkItemName:'车身外观', chkItemCat:'划痕', chkItemDesc:'接车重点检查发现右后车门处存在约 12cm 划痕，判定为重点检查项目异常，已拍照留档并上报调度中心。',
+      excType:'事故', excDesc:'行驶至中山南路十字路口时被右侧变道车辆剐蹭，右前轮眉漆面受损，已现场拍照、报警并报备调度中心。',
+      rtExPos:'右前', rtExCat:'凹陷', rtExDesc:'还车 360° 环视检查发现右前轮眉与使用过程上报事故对应位置存在轻微凹陷及漆面剥落，判定为还车检查异常，拍照留档随记录上报。' },
+    /* ---- 车队全量台账（其他驾驶员行程，id 7-14 与行程详情同序） ---- */
+    { date:'2026-08-29', dM:'8月29日', flag:'', weak:'周六', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'李建国', start:'07:50', end:'12:10', sKm:12160, eKm:12260,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-25', dM:'8月25日', flag:'', weak:'周二', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'王强', start:'13:20', end:'17:45', sKm:11600, eKm:11760,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'孙梅',
+      chkExPos:'左后', chkExCat:'划痕', chkExDesc:'出车前 360° 环视检查发现左后车门下缘存在约 5cm 划痕，判定为接车检查异常，已拍照留档并上报调度中心。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'故障', excDesc:'行驶途中仪表盘胎压监测报警，靠边停车检查后低速驶回单位，已报备调度中心安排检修。',
+      rtExPos:'右后', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查发现右后翼子板存在约 3cm 划痕，判定为还车检查异常，拍照留档随记录上报。' },
+    { date:'2026-08-19', dM:'8月19日', flag:'', weak:'周三', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'孙梅', start:'09:05', end:'11:30', sKm:11420, eKm:11560,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'李四',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-31', dM:'8月31日', flag:'', weak:'周一', plate:'苏A·23456', model:'大众 帕萨特 380TSI',
+      driver:'李建国', start:'08:10', end:'12:20', sKm:20300, eKm:20440,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'李建国',
+      chkExPos:'左前', chkExCat:'划痕', chkExDesc:'出车前 360° 环视检查发现左前保险杠转角处存在约 6cm 划痕，判定为接车检查异常，已拍照留档并上报调度中心。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'事故', excDesc:'行驶至目的地停车场倒车入库时，右后保险杠与立柱发生轻微剐蹭，无人员受伤，已现场拍照并报备调度中心。',
+      rtExPos:'右后', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查确认右后保险杠剐蹭处存在约 8cm 划痕及轻微掉漆，与使用过程上报事故位置一致，判定为还车检查异常，拍照留档随记录上报。' },
+    { date:'2026-08-24', dM:'8月24日', flag:'', weak:'周一', plate:'苏A·34567', model:'别克 GL8 ES 陆尊',
+      driver:'王强', start:'09:20', end:'16:30', sKm:31880, eKm:32100,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'王强',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'灯光及设备', chkItemName:'右前大灯', chkItemCat:'不亮', chkItemDesc:'接车重点检查发现右前大灯不亮，判定为重点检查项目异常，已拍照留档并上报调度中心安排检修。',
+      excType:'故障', excDesc:'行驶途中确认右前大灯故障无法点亮，夜间行车存在安全隐患，已报备调度中心，返场后安排更换灯泡。',
+      rtExPos:'左后', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查发现左后保险杠转角处存在约 4cm 划痕，判定为还车检查异常，拍照留档随记录上报。' },
+    { date:'2026-08-27', dM:'8月27日', flag:'', weak:'周四', plate:'苏A·67890', model:'大众 迈腾 330TSI',
+      driver:'孙梅', start:'14:00', end:'15:40', sKm:13020, eKm:13080,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-23', dM:'8月23日', flag:'', weak:'周日', plate:'苏A·54321', model:'奥迪 A6L 45 TFSI',
+      driver:'李建国', start:'10:00', end:'11:15', sKm:10940, eKm:11000,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'赵六',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-20', dM:'8月20日', flag:'', weak:'周四', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'王强', start:'08:30', end:'12:50', sKm:23580, eKm:23600,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    /* ---- 单类异常演示（每车 3 条：仅车辆检查 / 仅异常上报 / 仅结束里程，id 15-32 与行程详情同序） ---- */
+    { date:'2026-08-22', dM:'8月22日', flag:'', weak:'周六', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'李建国', start:'07:30', end:'08:20', sKm:11570, eKm:11600,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'灯光及设备', chkItemName:'右后尾灯', chkItemCat:'不亮', chkItemDesc:'接车重点检查发现右后尾灯无法点亮，判定为重点检查项目异常，已拍照留档并上报调度中心。',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-17', dM:'8月17日', flag:'', weak:'周一', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'王强', start:'10:20', end:'11:35', sKm:11340, eKm:11410,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'故障', excDesc:'行驶途中仪表盘提示冷却液温度过高，靠边停车检查后温度回落，低速返回单位，已报备调度中心安排检修。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-16', dM:'8月16日', flag:'', weak:'周日', plate:'苏A·12345', model:'丰田 凯美瑞 2.5G',
+      driver:'孙梅', start:'09:30', end:'11:20', sKm:11260, eKm:11340,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'王强',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'左前', rtExCat:'掉漆', rtExDesc:'还车 360° 环视检查发现左前保险杠下沿存在约 2cm 掉漆，判定为还车检查异常，已拍照留档随记录上报。' },
+    { date:'2026-08-15', dM:'8月15日', flag:'', weak:'周六', plate:'苏A·23456', model:'大众 帕萨特 380TSI',
+      driver:'赵六', start:'09:00', end:'10:15', sKm:20060, eKm:20130,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'安全性能', chkItemName:'左前轮胎', chkItemCat:'胎压不足', chkItemDesc:'接车重点检查发现左前轮胎气压明显偏低（表显 1.8bar），判定为重点检查项目异常，已拍照留档并上报调度中心。',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-14', dM:'8月14日', flag:'', weak:'周五', plate:'苏A·23456', model:'大众 帕萨特 380TSI',
+      driver:'李建国', start:'08:30', end:'11:05', sKm:19990, eKm:20060,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'赵六',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'故障', excDesc:'行驶途中右侧车窗升降偶发卡滞，停靠检查后恢复正常，已报备调度中心预约返场检修。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-13', dM:'8月13日', flag:'', weak:'周四', plate:'苏A·23456', model:'大众 帕萨特 380TSI',
+      driver:'吴九', start:'14:00', end:'15:10', sKm:19920, eKm:19990,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'李建国',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'右后', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查发现右后保险杠转角处存在约 3cm 划痕，判定为还车检查异常，已拍照留档随记录上报。' },
+    { date:'2026-08-12', dM:'8月12日', flag:'', weak:'周三', plate:'苏A·34567', model:'别克 GL8 ES 陆尊',
+      driver:'王强', start:'08:40', end:'09:30', sKm:31640, eKm:31710,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国',
+      chkExPos:'正后', chkExCat:'划痕', chkExDesc:'出车前 360° 环视检查发现尾门右下角存在约 5cm 划痕，判定为接车检查异常，已拍照留档并上报调度中心。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-11', dM:'8月11日', flag:'', weak:'周二', plate:'苏A·34567', model:'别克 GL8 ES 陆尊',
+      driver:'孙梅', start:'09:10', end:'10:40', sKm:31570, eKm:31640,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'王强',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'故障', excDesc:'行驶途中发现第二排右侧座椅滑轨卡滞无法调节，已拍照并报备调度中心安排检修。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-10', dM:'8月10日', flag:'', weak:'周一', plate:'苏A·34567', model:'别克 GL8 ES 陆尊',
+      driver:'李建国', start:'13:30', end:'14:50', sKm:31500, eKm:31570,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'右前', rtExCat:'凹陷', rtExDesc:'还车 360° 环视检查发现右前轮眉处存在约 2cm 凹陷，判定为还车检查异常，已拍照留档随记录上报。' },
+    { date:'2026-08-09', dM:'8月9日', flag:'', weak:'周日', plate:'苏A·54321', model:'奥迪 A6L 45 TFSI',
+      driver:'王五', start:'09:20', end:'10:15', sKm:10840, eKm:10900,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'安全性能', chkItemName:'制动液', chkItemCat:'液位偏低', chkItemDesc:'接车重点检查发现制动液液位低于下限刻度，判定为重点检查项目异常，已拍照留档并上报调度中心。',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-08', dM:'8月8日', flag:'', weak:'周六', plate:'苏A·54321', model:'奥迪 A6L 45 TFSI',
+      driver:'李建国', start:'10:00', end:'11:40', sKm:10770, eKm:10840,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'王五',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'事故', excDesc:'行驶至北京东路交叉口等红灯时被后方车辆轻微追尾，后保险杠无明显损伤，无人员受伤，已按要求报警并报备调度中心。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-07', dM:'8月7日', flag:'', weak:'周五', plate:'苏A·54321', model:'奥迪 A6L 45 TFSI',
+      driver:'孙七', start:'08:50', end:'10:05', sKm:10700, eKm:10770,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'李建国',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'左后', rtExCat:'掉漆', rtExDesc:'还车 360° 环视检查发现左后翼子板存在约 3cm 掉漆，判定为还车检查异常，已拍照留档随记录上报。' },
+    { date:'2026-08-06', dM:'8月6日', flag:'', weak:'周四', plate:'苏A·67890', model:'大众 迈腾 330TSI',
+      driver:'赵六', start:'08:20', end:'09:15', sKm:12875, eKm:12940,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'',
+      chkItemGrp:'随车物品', chkItemName:'千斤顶', chkItemCat:'缺失', chkItemDesc:'接车重点检查发现后备箱随车千斤顶缺失，判定为重点检查项目异常，已拍照留档并上报调度中心。',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-05', dM:'8月5日', flag:'', weak:'周三', plate:'苏A·67890', model:'大众 迈腾 330TSI',
+      driver:'孙梅', start:'13:40', end:'15:20', sKm:12810, eKm:12875,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'赵六',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'故障', excDesc:'行驶途中仪表盘胎压监测报警，就近停靠检查发现左前轮胎气压偏低，补充气压后恢复正常，已报备调度中心安排复检轮胎。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-04', dM:'8月4日', flag:'', weak:'周二', plate:'苏A·67890', model:'大众 迈腾 330TSI',
+      driver:'吴九', start:'15:30', end:'16:40', sKm:12750, eKm:12810,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'孙梅',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'右后', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查发现右后翼子板存在约 2cm 划痕，判定为还车检查异常，已拍照留档随记录上报。' },
+    { date:'2026-08-03', dM:'8月3日', flag:'', weak:'周一', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'孙七', start:'09:00', end:'10:20', sKm:23410, eKm:23470,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'王强',
+      chkExPos:'左后', chkExCat:'划痕', chkExDesc:'出车前 360° 环视检查发现左后车门把手下方存在约 5cm 划痕，判定为接车检查异常，已拍照留档并上报调度中心。',
+      chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-02', dM:'8月2日', flag:'', weak:'周日', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'王强', start:'10:30', end:'12:00', sKm:23350, eKm:23410,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'孙七',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'事故', excDesc:'行驶至停车场出口时与收费栏杆发生轻微剐蹭，左侧后视镜外壳划伤，无人员受伤，已现场拍照并报备调度中心。',
+      rtExPos:'', rtExCat:'', rtExDesc:'' },
+    { date:'2026-08-01', dM:'8月1日', flag:'', weak:'周六', plate:'苏A·88888', model:'别克 GL8 ES 陆尊',
+      driver:'李四', start:'09:00', end:'10:30', sKm:23290, eKm:23350,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'王强',
+      chkExPos:'', chkExCat:'', chkExDesc:'', chkItemGrp:'', chkItemName:'', chkItemCat:'', chkItemDesc:'',
+      excType:'', excDesc:'', rtExPos:'左前', rtExCat:'划痕', rtExDesc:'还车 360° 环视检查发现左前翼子板存在约 3cm 划痕，判定为还车检查异常，已拍照留档随记录上报。' }
+  ];
+
+  /* ===== 记录编号（与工作记录/行程详情同规则）：GZ + 用车日期(YYYYMMDD) + 当日行程流水 ===== */
+  (function autoNo() {
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    var seen = {};
+    TRIPS.forEach(function (t) {
+      var day = t.date.replace(/-/g, '');
+      seen[day] = (seen[day] || 0) + 1;
+      t.no = 'GZ' + day + '-' + pad(seen[day]);
+    });
+  })();
+
+  /* ===== 工具 ===== */
+  function qs(k) {
+    var m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function byId(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s); }
+  function fmt(n) { return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  /* 异常判定（与行程详情步骤 3/5/7 一致）：返回该行程存在的异常明细 */
+  function abnOf(t) {
+    var a = [];
+    if (t.chkExPos)    a.push({ cat: '车辆检查', sub: '360° 环视检查', hl: t.chkExPos + ' · ' + t.chkExCat, txt: t.chkExDesc || (t.chkExPos + '方位发现' + t.chkExCat) });
+    if (t.chkItemName) a.push({ cat: '车辆检查', sub: '重点检查项目', txt: t.chkItemDesc || ((t.chkItemGrp ? t.chkItemGrp + ' · ' : '') + t.chkItemName + (t.chkItemCat ? '（' + t.chkItemCat + '）' : '')) });
+    if (t.exception === '异常') a.push({ cat: '异常上报', sub: t.excType || '异常情况', txt: t.excDesc || '使用过程中上报异常情况，详见行程详情。' });
+    if (t.rtExPos)     a.push({ cat: '结束里程', sub: '360° 环视检查', hl: t.rtExPos + ' · ' + t.rtExCat, txt: t.rtExDesc || (t.rtExPos + '方位发现' + t.rtExCat) });
+    return a;
+  }
+
+  function rowHtml(x) {
+    return '<div class="abn-row">' +
+      '<span class="r-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L21 19.5H3L12 4.5z" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"/><path d="M12 10.5v4.2" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg></span>' +
+      '<div class="r-mid">' +
+        '<span class="r1">' + x.cat + (x.hl ? '<b class="hl">' + esc(x.hl) + '</b>' : '') + '<i>' + esc(x.sub) + '</i></span>' +
+        (x.txt ? '<span class="r2">' + esc(x.txt) + '</span>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ===== 渲染 ===== */
+  var PLATE = qs('plate');
+  var dSel = '';                     /* 选中的用车日期 YYYY-MM-DD（单日筛选） */
+
+  /* 关键字命中：驾驶员姓名 或 记录编号（GZ…-… / 去分隔符 / 纯数字均可） */
+  function kwHit(t, kw) {
+    if (!kw) return true;
+    var u = kw.toUpperCase();
+    if (t.driver && t.driver.indexOf(kw) >= 0) return true;
+    var bare = t.no.toUpperCase();
+    if (bare.indexOf(u) >= 0) return true;
+    var k = u.replace(/[^A-Z0-9]/g, '');
+    if (k && bare.replace(/[^A-Z0-9]/g, '').indexOf(k) >= 0) return true;
+    var kd = u.replace(/\D/g, '');
+    if (kd && bare.replace(/\D/g, '').indexOf(kd) >= 0) return true;
+    return false;
+  }
+
+  function cardHtml(r) {
+    var t = r.t;
+    return '<div class="trip-card" onclick="openAbn(' + r.i + ')">' +
+      '<div class="tc-no">' +
+        '<span class="no-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h12A1.5 1.5 0 0 1 19.5 5v16l-3-1.6-3 1.6-3-1.6-3 1.6V5A1.5 1.5 0 0 1 6 3.5z" stroke="#B91C1C" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.8 8.5h6.4M8.8 12h6.4" stroke="#B91C1C" stroke-width="1.7" stroke-linecap="round"/></svg></span>' +
+        '<span class="no-lab">记录编号</span>' +
+        '<span class="no-val">' + t.no + '</span>' +
+        '<span class="st bad">异常</span>' +
+        '<span class="no-go"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+      '</div>' +
+      '<div class="abn-meta">' +
+        '<span class="am-d">' + t.dM + '<span class="wk">' + t.weak + '</span></span>' +
+        '<span class="am-x">驾驶员 ' + t.driver + '</span>' +
+        '<span class="am-x">' + t.start + ' – ' + t.end + '</span>' +
+        '<span class="am-x am-km">' + fmt(t.eKm - t.sKm) + ' km</span>' +
+      '</div>' +
+      '<div class="abn-rows">' + r.a.map(rowHtml).join('') + '</div>' +
+    '</div>';
+  }
+
+  function applyFilter() {
+    var kw = byId('kwInp').value.trim();
+    var rows = [];
+    TRIPS.forEach(function (t, i) {
+      if (PLATE && t.plate !== PLATE) return;
+      var a = abnOf(t);
+      if (!a.length) return;
+      if (kw && !kwHit(t, kw)) return;
+      if (dSel && t.date !== dSel) return;
+      rows.push({ t: t, a: a, i: i });
+    });
+    byId('srchBox').classList.toggle('has', !!kw);
+    updateDateUI();
+    renderList(rows, kw);
+  }
+
+  function renderList(rows, kw) {
+    var listEl = byId('abnList');
+    if (!rows.length) {
+      var filtered = !!kw || !!dSel;
+      if (filtered) {
+        listEl.innerHTML =
+          '<div class="empty"><div class="eico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="#9AA5B5" stroke-width="1.8"/><path d="M16 16l4.5 4.5" stroke="#9AA5B5" stroke-width="1.8" stroke-linecap="round"/></svg></div>' +
+          '<span class="etxt">没有找到符合条件的异常记录</span>' +
+          '<span class="esub">换个驾驶员或记录编号，<br>或调整用车日期再试试</span>' +
+          '<button class="empty-btn" onclick="resetAll()">重置筛选</button>' +
+          '</div>';
+        return;
+      }
+      var total = PLATE ? TRIPS.filter(function (t) { return t.plate === PLATE; }).length : TRIPS.length;
+      listEl.innerHTML =
+        '<div class="empty"><div class="eico"><svg width="27" height="27" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.6" stroke="#9AA5B5" stroke-width="1.8"/><path d="M8.5 12.2l2.4 2.4 4.6-5" stroke="#9AA5B5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+        '<span class="etxt">该车暂无异常记录</span>' +
+        '<span class="esub">该车 ' + total + ' 次行程的车辆检查、异常上报<br>与结束里程检查均正常，未发现异常档案</span>' +
+        (PLATE
+          ? '<button class="empty-btn ghost" onclick="goBack()">返回车辆详情</button>'
+          : '') +
+        '</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(cardHtml).join('');
+  }
+
+  /* 日期筛选按钮状态：默认「用车日期」/ 选中显示日期 + 可清除 */
+  function updateDateUI() {
+    var on = !!dSel;
+    byId('dateBtn').classList.toggle('on', on);
+    byId('dateTxt').textContent = dSel || '用车日期';
+    byId('dateClear').style.display = on ? 'flex' : 'none';
+    var clr = byId('clrDate');
+    clr.classList.toggle('off', !on);
+  }
+
+  function clearKw() {
+    byId('kwInp').value = '';
+    applyFilter();
+  }
+  function clearDate() {
+    dSel = '';
+    closeDateSheet();
+    applyFilter();
+  }
+  function resetAll() {
+    byId('kwInp').value = '';
+    dSel = '';
+    applyFilter();
+  }
+
+  /* ===== 底部弹层：选择用车日期（单日） ===== */
+  var calY = 0, calM = 0;   /* 弹层当前展示的年月（月 1-12） */
+  var DEMO_TODAY = '2026-09-02';   /* 演示基准"今天"：与台账 flag 一致，固定不随真实日期漂移 */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() { return DEMO_TODAY; }
+
+  function openDateSheet() {
+    var d = dSel ? new Date(dSel.replace(/-/g, '/')) : new Date(DEMO_TODAY.replace(/-/g, '/'));
+    calY = d.getFullYear(); calM = d.getMonth() + 1;
+    renderCal();
+    byId('dateMask').classList.add('show');
+  }
+  function closeDateSheet() { byId('dateMask').classList.remove('show'); }
+  function calMove(step) {
+    calM += step;
+    if (calM === 0) { calM = 12; calY--; }
+    if (calM === 13) { calM = 1; calY++; }
+    renderCal();
+  }
+  function calToday() {
+    var s = todayStr();
+    var d = new Date(s.replace(/-/g, '/'));
+    calY = d.getFullYear(); calM = d.getMonth() + 1;
+    dSel = s;
+    renderCal();
+    applyFilter();
+    closeDateSheet();
+  }
+  function renderCal() {
+    byId('calYM').textContent = calY + ' 年 ' + calM + ' 月';
+    var first = new Date(calY, calM - 1, 1);
+    var offset = first.getDay();                 /* 0=周日 */
+    var dim = new Date(calY, calM, 0).getDate(); /* 当月天数 */
+    var prevDim = new Date(calY, calM - 1, 0).getDate();
+    var td = todayStr();
+    var cells = '', i, d;
+    /* 上月补齐格（灰显不可点） */
+    for (i = 0; i < offset; i++) {
+      cells += '<span class="cal-cell dim">' + (prevDim - offset + 1 + i) + '</span>';
+    }
+    for (d = 1; d <= dim; d++) {
+      var ds = calY + '-' + pad2(calM) + '-' + pad2(d);
+      var cls = 'cal-cell' + (ds === dSel ? ' sel' : (ds === td ? ' tday' : ''));
+      cells += '<span class="' + cls + '" data-date="' + ds + '" onclick="pickDate(\'' + ds + '\')">' + d + '</span>';
+    }
+    /* 下月补齐格（凑整周） */
+    var fill = (offset + dim) % 7;
+    if (fill) for (var n = 1; n <= 7 - fill; n++) {
+      cells += '<span class="cal-cell dim">' + n + '</span>';
+    }
+    byId('calGrid').innerHTML = cells;
+  }
+  function pickDate(ds) {
+    dSel = ds;
+    closeDateSheet();
+    applyFilter();
+  }
+
+  /* ===== 跳转 ===== */
+  function openAbn(i) {
+    location.href = 'trip-detail.html?id=' + i + '&src=abn' + (PLATE ? '&plate=' + encodeURIComponent(PLATE) : '');
+  }
+  function goBack() {
+    if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
+    location.href = 'vehicles.html';
+  }
+
+  /* ===== 入口 ===== */
+  (function init() {
+    byId('kwInp').addEventListener('input', applyFilter);
+    applyFilter();
+  })();
+</script>
+
+</body>
+</html>

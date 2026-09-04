@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 车辆信息</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --primary-deep: #001645;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --green: #10B981;
+    --green-d: #059669;
+    --amber: #F59E0B;
+    --amber-d: #D97706;
+    --red: #EF4444;
+    --red-d: #DC2626;
+    --gray-d: #64748B;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg); border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .v-content { flex: 1; position: relative; z-index: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* 顶部渐变区（与工作记录页同源） */
+  .v-top {
+    flex-shrink: 0; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1A6FE0 0%, #0A4FB8 52%, #001645 100%);
+    color: #fff; padding-bottom: 20px;
+  }
+  .v-top::before {
+    content: ''; position: absolute; right: -52px; top: -78px;
+    width: 200px; height: 200px; border-radius: 50%;
+    border: 26px solid rgba(255,255,255,.05); pointer-events: none;
+  }
+  .v-top .time { color: #fff; }
+  .v-head {
+    position: relative; z-index: 1;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 4px 22px 0;
+  }
+  .v-head .tt { font-size: 21px; font-weight: 800; letter-spacing: .5px; line-height: 1.25; }
+  .v-head .tt-sub { display: block; margin-top: 3px; font-size: 11px; color: rgba(255,255,255,.72); letter-spacing: .3px; }
+  .v-head .tt-side { text-align: right; flex-shrink: 0; }
+  .v-head .tt-side .n {
+    font-size: 19px; font-weight: 800; font-family: Inter, "Sarasa Gothic SC", sans-serif; line-height: 1.1;
+  }
+  .v-head .tt-side .n b { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.8); margin-left: 2px; }
+  .v-head .tt-side .lab { display: block; margin-top: 3px; font-size: 10px; color: rgba(255,255,255,.6); letter-spacing: 1px; }
+
+  .v-body {
+    flex: 1; padding: 12px 16px 22px; display: flex; flex-direction: column; gap: 11px;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .v-body::-webkit-scrollbar { display: none; }
+
+  /* 搜索栏 */
+  .search-bar {
+    position: sticky; top: 0; z-index: 40;
+    margin: -12px -16px 0; padding: 10px 16px 11px;
+    background: var(--bg);
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 12px; height: 40px;
+    padding: 0 12px; border: 1px solid #E2E8F2;
+    box-shadow: 0 2px 8px rgba(15, 77, 178, 0.05);
+  }
+  .search-box svg { flex-shrink: 0; }
+  .search-box input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-size: 13px; color: var(--text); font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--muted); }
+  .search-clr {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #E5E9F2; color: #64748B; border: none; cursor: pointer;
+    display: none; align-items: center; justify-content: center; padding: 0;
+    font-family: inherit;
+  }
+  .search-clr.show { display: inline-flex; }
+  .search-hint { margin-top: 6px; font-size: 10.5px; color: var(--muted); letter-spacing: .2px; }
+  .search-hint b { font-weight: 500; color: var(--sub); }
+
+  /* 车辆卡片 */
+  .vc {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    box-shadow: 0 4px 16px rgba(15, 77, 178, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+    display: flex; flex-direction: column; gap: 11px;
+    cursor: pointer; transition: transform .15s;
+  }
+  .vc:active { transform: scale(.985); }
+  .vc-head { display: flex; align-items: center; gap: 11px; }
+  .vc-img {
+    width: 96px; height: 64px; border-radius: 10px; flex-shrink: 0; overflow: hidden;
+    background: #F5F7FA; border: 1px solid rgba(15,77,178,.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vc-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .vc-plate {
+    font-size: 17px; font-weight: 800; letter-spacing: .6px; color: var(--primary);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; line-height: 1.2; white-space: nowrap;
+  }
+  .vc-model { font-size: 11.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 维保状态标签 */
+  .vc-st {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
+    height: 26px; padding: 0 11px; border-radius: 100px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .5px;
+  }
+  .vc-st .sdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .st-normal  { background: #F0FDF4; color: var(--green-d); }
+  .st-normal .sdot { background: var(--green); box-shadow: 0 0 0 2.5px rgba(16,185,129,.22); }
+  .st-repair  { background: #FEF2F2; color: var(--red-d); }
+  .st-repair .sdot { background: var(--red); box-shadow: 0 0 0 2.5px rgba(239,68,68,.22); }
+  .st-maintain { background: #FFFBEB; color: var(--amber-d); }
+  .st-maintain .sdot { background: var(--amber); box-shadow: 0 0 0 2.5px rgba(245,158,11,.22); }
+  .st-off { background: #F1F3F8; color: var(--gray-d); }
+  .st-off .sdot { background: #94A3B8; box-shadow: 0 0 0 2.5px rgba(148,163,184,.25); }
+
+  /* 车辆信息行 */
+  .vc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+  .vc-cell {
+    background: #F7F9FC; border-radius: 10px; padding: 8px 10px;
+    border: 1px solid rgba(15,77,178,.04);
+    display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  }
+  .vc-cell.span2 { grid-column: span 2; }
+  .vc-cell .k { font-size: 10.5px; color: var(--muted); letter-spacing: .2px; white-space: nowrap; }
+  .vc-cell .val {
+    font-size: 12.5px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .vc-cell .val.blue { color: var(--primary); }
+  .vc-cell .val.gray { color: var(--gray-d); }
+  .vc-cell .val.vin { font-size: 11.5px; letter-spacing: 1px; }
+
+  /* 保险 / 年检到期倒计时提示条（到期不足 90 天 / 已到期才显示） */
+  .ins-bar, .ann-bar {
+    display: flex; align-items: center; gap: 7px;
+    border-radius: 10px; padding: 8px 10px;
+    font-size: 11px; line-height: 1.45;
+  }
+  .ins-bar b, .ann-bar b { font-size: 12px; font-weight: 800; font-family: Inter, "Sarasa Gothic SC", sans-serif; }
+  .ins-bar svg, .ann-bar svg { flex-shrink: 0; }
+  .ins-bar.warn, .ann-bar.warn { background: #FFFBEB; color: #B45309; border: 1px solid #F3E2BC; }
+  .ins-bar.hot, .ann-bar.hot { background: #FEF2F2; color: #B91C1C; border: 1px solid #F5D6D6; }
+  .ins-bar.exp, .ann-bar.exp { background: #FEF2F2; color: #B91C1C; border: 1px solid #F5D6D6; }
+
+  /* 空态 */
+  .empty {
+    background: var(--card); border-radius: 14px; padding: 38px 20px;
+    text-align: center; color: var(--muted); font-size: 13px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    border: 1px solid rgba(15,77,178,.04);
+  }
+
+  /* TabBar */
+  .tabbar { flex-shrink: 0; padding: 10px 16px 20px; }
+  .tab-pill {
+    background: #fff; border-radius: 38px; height: 66px;
+    display: flex; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+    padding: 5px; border: 1px solid rgba(15,77,178,.05);
+  }
+  .tab {
+    flex: 1; border-radius: 30px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; cursor: pointer;
+    transition: all .25s; color: #8A94A6; font-size: 10.5px;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    color: #fff; font-weight: 600;
+    box-shadow: 0 6px 14px rgba(1, 77, 178, 0.32);
+  }
+  .tab svg { display: block; }
+
+  /* toast */
+  .toast {
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(10, 22, 40, 0.88); color: #fff; font-size: 13px;
+    padding: 9px 18px; border-radius: 100px; opacity: 0; pointer-events: none;
+    transition: all .3s; white-space: nowrap; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <div class="page">
+    <div class="v-top">
+      <div class="statusbar">
+        <span class="time">15:50</span>
+        <div class="capsule">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+      </div>
+      <div class="v-head">
+        <div>
+          <span class="tt">车辆信息</span>
+          <span class="tt-sub">车辆列表 · 维保状态一览</span>
+        </div>
+        <div class="tt-side">
+          <span class="lab">车辆总数</span>
+          <span class="n"><i id="vTotal" style="font-style:normal">6</i><b>辆</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="v-content">
+      <div class="v-body">
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+          <div class="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#94A3B8" stroke-width="2"/><path d="M15.5 15.5L20 20" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>
+            <input id="kw" type="text" placeholder="搜索车辆" oninput="onSearch(this.value)">
+            <button type="button" class="search-clr" id="kwClr" onclick="clearSearch()">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="search-hint">支持按 <b>车牌号 / 品牌 / VIN / 发动机号 / 部门</b> 搜索</div>
+        </div>
+
+        <!-- 车辆列表 -->
+        <div id="vList" style="display:flex;flex-direction:column;gap:11px;"></div>
+      </div>
+    </div>
+
+    <!-- 底部标签栏 -->
+    <div class="tabbar">
+      <div class="tab-pill">
+        <div class="tab" data-tab="0" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 7.5L9 2l6.5 5.5V15a1 1 0 01-1 1h-4v-5H7.5v5h-4a1 1 0 01-1-1V7.5z" fill="currentColor"/></svg>
+          <span>首页</span>
+        </div>
+        <div class="tab active" data-tab="1" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2.5 6l4-3h5l4 3v8a1 1 0 01-1 1h-11a1 1 0 01-1-1V6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="10" r="2" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>车辆</span>
+        </div>
+        <div class="tab" data-tab="2" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="2.5" width="12" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M6 6.5h6M6 9.5h6M6 12.5h3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>工作记录</span>
+        </div>
+        <div class="tab" data-tab="3" onclick="goTab(this)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 15.5a6.2 6.2 0 0112.4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>我的</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  /* ===== 演示数据：车辆列表（维保状态 normal/repair/maintain/off） ===== */
+  var VEHICLES = [
+    { plate: '苏A·12345', img: 'img/car-camry.png',  brand: '丰田', model: '凯美瑞 2.5G',     driver: '张三',    vin: 'LVGBE40K8NG123456', engine: 'A25A-045678',  buyDate: '2021-03-12', dept: '综合办公室', st: 'normal' },
+    { plate: '苏A·23456', img: 'img/car-magotan.png', brand: '大众', model: '帕萨特 380TSI',   driver: '李建国',  vin: 'LSVCT6A40NC234567', engine: 'EA888-034219', buyDate: '2022-06-08', dept: '综合办公室', st: 'normal' },
+    { plate: '苏A·34567', img: 'img/car-gl8.png',    brand: '别克', model: 'GL8 ES 陆尊',     driver: '王强',    vin: 'LSGAB84L5NC345678', engine: 'LSY-067845',   buyDate: '2020-11-25', dept: '机关事务中心', st: 'normal' },
+    { plate: '苏A·67890', img: 'img/car-magotan.png', brand: '大众', model: '迈腾 330TSI',     driver: '待分配',  vin: 'LSVCD24C2NM456789', engine: 'EA888-052916', buyDate: '2019-09-30', dept: '机关事务中心', st: 'repair' },
+    { plate: '苏A·54321', img: 'img/car-audi.png',   brand: '奥迪', model: 'A6L 45 TFSI',    driver: '待分配',  vin: 'LFV3A28W8NN567890', engine: 'DKW-018273',   buyDate: '2018-04-16', dept: '接待联络处', st: 'maintain' },
+    { plate: '苏A·88888', img: 'img/car-gl8.png',    brand: '别克', model: 'GL8 ES',         driver: '待分配',  vin: 'LSGAB84L5NM678901', engine: 'LSY-083412',   buyDate: '2017-01-19', dept: '接待联络处', st: 'off' }
+  ];
+
+  var ST = {
+    normal:   { label: '正常',   cls: 'st-normal' },
+    repair:   { label: '维修中', cls: 'st-repair' },
+    maintain: { label: '保养中', cls: 'st-maintain' },
+    off:      { label: '停用',   cls: 'st-off' }
+  };
+
+  var KW = '';
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 1600);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ===== 保险信息（后台维护 · 仅查看）：每车一份，zp_insurance_info ===== */
+  var INS_KEY = 'zp_insurance_info';
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function insLoad() {
+    try { var raw = localStorage.getItem(INS_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function insSave(a) { localStorage.setItem(INS_KEY, JSON.stringify(a)); }
+  /* 相对今天偏移 o 天的日期 YYYY-MM-DD（演示数据用） */
+  function off(o) {
+    var d = new Date();
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + o);
+    return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate());
+  }
+  /* 保单附件占位图（A4 保单扫描件示意） */
+  function docImg(k) {
+    var P = [
+      { band: '#014DB2', line: '#C9D9F2' },
+      { band: '#047857', line: '#BFE9D8' },
+      { band: '#B45309', line: '#F3DFC2' }
+    ];
+    var c = P[k % 3];
+    var rows = '';
+    for (var i = 0; i < 5; i++) {
+      var w = 150 + (i * 17) % 55;
+      rows += "<rect x='92' y='" + (124 + i * 42) + "' width='" + w + "' height='8' rx='4' fill='" + c.line + "'/>" +
+              "<rect x='26' y='" + (120 + i * 42) + "' width='56' height='16' rx='8' fill='" + c.band + "' opacity='.07'/>";
+    }
+    return 'data:image/svg+xml,' + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='440'>" +
+      "<rect width='320' height='440' rx='14' fill='#fff'/>" +
+      "<path d='M0 14a14 14 0 0 1 14-14h292a14 14 0 0 1 14 14v84H0z' fill='" + c.band + "'/>" +
+      "<rect x='26' y='38' width='110' height='16' rx='8' fill='#fff' opacity='.95'/>" +
+      "<rect x='26' y='64' width='170' height='9' rx='4.5' fill='#fff' opacity='.55'/>" +
+      "<circle cx='258' cy='62' r='26' fill='#fff' opacity='.92'/>" +
+      "<path d='M248 62l7 7 13-15' stroke='" + c.band + "' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/>" +
+      rows +
+      "<circle cx='74' cy='352' r='30' fill='none' stroke='" + c.band + "' opacity='.35' stroke-width='2'/>" +
+      "<path d='M64 352l7 7 12-14' stroke='" + c.band + "' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none' opacity='.85'/>" +
+      "</svg>");
+  }
+  /* 演示数据：与车辆列表 6 车对齐，每车一份保险（4 车到期 <90 天演示倒计时） */
+  function insSeed() {
+    if (insLoad().length) return;
+    var S = [];
+    function push(plate, company, policyNo, type, dueOff, pics) {
+      var arr = [];
+      (pics || []).forEach(function (k) { arr.push(docImg(k)); });
+      S.push({ plate: plate, company: company, policyNo: policyNo, type: type,
+               expireDate: off(dueOff), photos: arr });
+    }
+    push('苏A·12345', '中国人民财产保险', 'PDAA2026320100XJG07256', '综合险', 22, [0, 1]);
+    push('苏A·23456', '中国平安财产保险', '1162206221012345678901', '商业险', 68, [1]);
+    push('苏A·34567', '中国太平洋财产保险', 'ANAH2026NJ00123456', '交强险', 300, [2, 0]);
+    push('苏A·67890', '中国太平洋财产保险', 'ACCI2026NJ00123456', '商业险', 27, [2]);
+    push('苏A·54321', '中国人寿财产保险', '2825260000123456789', '综合险', 59, [0]);
+    push('苏A·88888', '中华联合财产保险', '07712026230100012345', '交强险', 340, [1, 2]);
+    insSave(S);
+  }
+  function insOf(plate) {
+    insSeed();
+    var a = insLoad(), i;
+    for (i = 0; i < a.length; i++) { if (a[i].plate === plate) return a[i]; }
+    return null;
+  }
+  /* 到期状态：>90 在保 / ≤90 剩N天(≤30 红) / 已到期 */
+  function insSt(due) {
+    var a = String(due).split('-');
+    var d = new Date(+a[0], (+a[1] || 1) - 1, +a[2] || 1);
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var days = Math.round((d - t) / 86400000);
+    if (days < 0)  return { cls: 'exp',  txt: '已到期',  days: days };
+    if (days <= 30) return { cls: 'hot',  txt: '剩 ' + days + ' 天', days: days };
+    if (days <= 90) return { cls: 'warn', txt: '剩 ' + days + ' 天', days: days };
+    return { cls: 'ok', txt: '在保', days: days };
+  }
+  /* 车辆卡倒计时条：到期不足 90 天（或已到期）才生成 */
+  function insBarHtml(plate) {
+    var r = insOf(plate);
+    if (!r) return '';
+    var st = insSt(r.expireDate);
+    if (st.cls === 'ok') return '';
+    var icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l7 2.4v6.3c0 4.4-2.9 7.3-7 8.8-4.1-1.5-7-4.4-7-8.8V5.9L12 3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 8v5M12 16.2h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+    var t = st.cls === 'exp'
+      ? '保险已于 <b>' + r.expireDate + '</b> 到期，请及时联系后台续保'
+      : '保险将于 <b>' + r.expireDate + '</b> 到期 · 剩 <b>' + st.days + '</b> 天';
+    return '<div class="ins-bar ' + (st.cls === 'exp' ? 'exp' : st.cls) + '">' + icon + '<span>' + t + '</span></div>';
+  }
+
+  /* ===== 年检信息（后台维护 · 仅查看）：每车一份，zp_annual_info ===== */
+  var ANN_KEY = 'zp_annual_info';
+  function annLoad() {
+    try { var raw = localStorage.getItem(ANN_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function annSave(a) { localStorage.setItem(ANN_KEY, JSON.stringify(a)); }
+  /* 演示数据：与车辆列表 6 车对齐，每车一份年检（到期 <90 天 / 已到期演示倒计时） */
+  function annSeed() {
+    if (annLoad().length) return;
+    var S = [];
+    function push(plate, inspectOff, expireOff, org, pics) {
+      var arr = [];
+      (pics || []).forEach(function (k) { arr.push(docImg(k)); });
+      S.push({ plate: plate, inspectDate: off(inspectOff), expireDate: off(expireOff), org: org, photos: arr });
+    }
+    push('苏A·12345', -305, 60, '南京苏运机动车检测站', [0, 1]);
+    push('苏A·23456', -215, 150, '南京蓝盾车辆检测中心', [2]);
+    push('苏A·34567', -277, 88, '江苏盛达机动车检测有限公司', [1, 0]);
+    push('苏A·67890', -368, -3, '南京浦口机动车检测站', [2]);
+    push('苏A·54321', -335, 30, '南京车福机动车检测有限公司', [0]);
+    push('苏A·88888', -165, 200, '南京苏运机动车检测站', [1, 2]);
+    annSave(S);
+  }
+  function annOf(plate) {
+    annSeed();
+    var a = annLoad(), i;
+    for (i = 0; i < a.length; i++) { if (a[i].plate === plate) return a[i]; }
+    return null;
+  }
+  /* 到期分级与保险一致（>90 正常 / ≤90 剩N天 / 已到期） */
+  function annSt(d) { return insSt(d); }
+  /* 车辆卡年检到期倒计时条：到期不足 90 天（或已到期）才生成 */
+  function annBarHtml(plate) {
+    var r = annOf(plate);
+    if (!r) return '';
+    var st = annSt(r.expireDate);
+    if (st.cls === 'ok') return '';
+    var icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="17" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M8 2.5v4M16 2.5v4M3.5 9.5h17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9 15l2 2 4-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var t = st.cls === 'exp'
+      ? '年检已于 <b>' + r.expireDate + '</b> 到期，请及时联系后台办理'
+      : '年检将于 <b>' + r.expireDate + '</b> 到期 · 剩 <b>' + st.days + '</b> 天';
+    return '<div class="ann-bar ' + (st.cls === 'exp' ? 'exp' : st.cls) + '">' + icon + '<span>' + t + '</span></div>';
+  }
+
+  /* 搜索：车牌号 / 品牌 / VIN / 发动机号 / 部门（不区分大小写） */
+  function matchKw(v, kw) {
+    kw = kw.trim().toLowerCase();
+    if (!kw) return true;
+    return [v.plate, v.brand, v.vin, v.engine, v.dept].some(function (f) {
+      return String(f).toLowerCase().indexOf(kw) > -1;
+    });
+  }
+
+  function onSearch(val) {
+    KW = val;
+    var clr = document.getElementById('kwClr');
+    if (clr) { if (val) { clr.classList.add('show'); } else { clr.classList.remove('show'); } }
+    renderList();
+  }
+
+  function clearSearch() {
+    var input = document.getElementById('kw');
+    input.value = '';
+    onSearch('');
+  }
+
+  /* 车辆卡片 */
+  function cell(k, v, cls, extra) {
+    return '<div class="vc-cell' + (extra || '') + '"><span class="k">' + k + '</span>' +
+           '<span class="val' + (cls ? ' ' + cls : '') + '">' + esc(v) + '</span></div>';
+  }
+
+  function cardHtml(v) {
+    var meta = ST[v.st];
+    var drvCls = v.driver === '待分配' ? 'gray' : 'blue';
+    return '' +
+      '<div class="vc" onclick="goDetail(\'' + v.plate + '\')">' +
+        '<div class="vc-head">' +
+          '<span class="vc-img"><img src="' + v.img + '" alt="' + esc(v.plate) + '"></span>' +
+          '<div class="vc-main">' +
+            '<span class="vc-plate">' + esc(v.plate) + '</span>' +
+            '<span class="vc-model">' + esc(v.brand) + ' · ' + esc(v.model) + '</span>' +
+          '</div>' +
+          '<span class="vc-st ' + meta.cls + '"><span class="sdot"></span>' + meta.label + '</span>' +
+        '</div>' +
+        insBarHtml(v.plate) +
+        annBarHtml(v.plate) +
+        '<div class="vc-grid">' +
+          cell('品牌', v.brand) +
+          cell('型号', v.model) +
+          cell('当前绑定驾驶员', v.driver, drvCls) +
+          cell('购置日期', v.buyDate) +
+          cell('所属部门', v.dept) +
+          cell('发动机号', v.engine) +
+          cell('VIN', v.vin, 'vin', ' span2') +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderList() {
+    var box = document.getElementById('vList');
+    var arr = VEHICLES.filter(function (v) { return matchKw(v, KW); });
+    if (!arr.length) {
+      box.innerHTML = '<div class="empty">未找到符合条件的车辆</div>';
+      return;
+    }
+    var h = '';
+    arr.forEach(function (v) { h += cardHtml(v); });
+    box.innerHTML = h;
+  }
+
+  function goDetail(plate) {
+    location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(plate);
+  }
+
+  function renderTotal() {
+    document.getElementById('vTotal').textContent = VEHICLES.length;
+  }
+
+  function goTab(el) {
+    var idx = el.dataset.tab;
+    if (idx === '0') { location.href = 'home.html'; return; }
+    if (idx === '2') { location.href = 'trip-records.html'; return; }
+    if (idx === '3') { location.href = 'my.html'; return; }
+    /* idx === '1' 当前已在「车辆」 */
+  }
+
+  insSeed();
+  annSeed();
+  renderTotal();
+  renderList();
+</script>
+
+</body>
+</html>

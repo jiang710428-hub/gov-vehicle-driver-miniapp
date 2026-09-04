@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 加油记录编辑</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fe-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fe-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fe-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fe-nav .back-btn:active { transform: scale(0.9); }
+  .fe-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fe-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 14px 16px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .fe-body::-webkit-scrollbar { display: none; }
+
+  /* 车辆上下文条 */
+  .ctx-card {
+    display: flex; align-items: center; gap: 11px;
+    background: #fff; border-radius: 16px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .ctx-card .ctx-plate {
+    width: 104px; height: 36px; border-radius: 9px; flex-shrink: 0;
+    background: #0A1628; color: #fff;
+    font-size: 13px; font-weight: 800; letter-spacing: 1.4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .ctx-card .ctx-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ctx-card .ctx-t { font-size: 13.5px; font-weight: 800; }
+  .ctx-card .ctx-s {
+    font-size: 10.5px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* 表单卡 */
+  .f-card {
+    background: #fff; border-radius: 16px; padding: 14px 15px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .f-head { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+  .f-head .no {
+    width: 20px; height: 20px; border-radius: 7px; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  .f-head .t { font-size: 14.5px; font-weight: 800; letter-spacing: .3px; }
+  .f-head .sub { margin-left: auto; font-size: 10px; color: var(--faint); }
+  .f-head .req { color: var(--red); }
+
+  .field { margin-bottom: 11px; }
+  .field:last-child { margin-bottom: 0; }
+  .field .lab { font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 6px; display: flex; align-items: center; gap: 3px; }
+  .field .lab .req { color: var(--red); }
+
+  /* 选择器按钮 */
+  .fp-btn {
+    width: 100%; height: 46px; display: flex; align-items: center; gap: 9px;
+    background: #F5F7FA; border: 1.5px solid #E4E9F1; border-radius: 13px;
+    padding: 0 13px; cursor: pointer; font-family: inherit;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .fp-btn .fp-ic { flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+  .fp-btn .fp-tx { flex: 1; min-width: 0; text-align: left; }
+  .fp-btn .fp-val { font-size: 14px; font-weight: 700; color: var(--text); }
+  .fp-btn .fp-val.ph { color: var(--faint); font-weight: 500; }
+  .fp-btn .fp-tip { display: block; font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .fp-btn svg { flex-shrink: 0; color: #A5AEBE; }
+  .fp-btn.on { border-color: var(--primary); background: #F2F7FF; box-shadow: 0 0 0 3px rgba(1,77,178,.10); }
+  .fp-btn:active { transform: scale(0.99); }
+
+  /* 文本输入 */
+  .txt-input {
+    width: 100%; height: 44px; border-radius: 12px; outline: none;
+    border: 1.5px solid #E4E9F1; background: #F5F7FA;
+    padding: 0 13px; font-size: 14px; color: var(--text); font-family: inherit;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .txt-input::placeholder { color: #B4BDCC; }
+  .txt-input:focus {
+    border-color: var(--primary); background: #fff;
+    box-shadow: 0 0 0 3px rgba(1, 77, 178, .12);
+  }
+  .txt-input.err { border-color: var(--red); background: #FFF5F5; }
+
+  /* 金额输入 */
+  .money { position: relative; }
+  .money .cur {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; font-weight: 700; color: var(--sub);
+    z-index: 1; pointer-events: none; font-family: Inter, sans-serif;
+  }
+  .money .txt-input { padding-left: 28px; }
+
+  .two-col { display: flex; gap: 10px; }
+  .two-col .field { flex: 1; min-width: 0; }
+
+  /* 图片上传 */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .photo-cell {
+    aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; position: relative;
+    border: 1.5px dashed #CBD5E1; background: #F0F2F7; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s;
+  }
+  .photo-cell:active { transform: scale(0.97); }
+  .photo-cell .ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); }
+  .photo-cell .ph .cam-box {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-cell .ph .txt { font-size: 10px; font-weight: 600; color: var(--sub); }
+  .photo-cell.has { border-style: solid; border-color: #C6D2E4; }
+  .photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-cell .del {
+    position: absolute; right: 5px; top: 5px; width: 20px; height: 20px; border-radius: 50%;
+    border: none; cursor: pointer; background: rgba(10, 22, 40, .62); color: #fff;
+    font-size: 11px; line-height: 20px; display: none; text-align: center; padding: 0;
+  }
+  .photo-cell.has .del { display: block; }
+  .photo-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px;
+  }
+  .photo-count { font-size: 11px; color: var(--muted); }
+  .photo-count b { color: var(--primary); }
+  .demo-link {
+    border: none; background: none; cursor: pointer; color: var(--primary);
+    font-size: 11px; font-weight: 700; font-family: inherit;
+  }
+
+  /* 记录人（只读行） */
+  .ro { display: flex; align-items: center; gap: 9px; padding: 9px 2px; }
+  .ro + .ro { border-top: 1px solid var(--line); }
+  .ro .rk { font-size: 12px; color: var(--muted); width: 76px; flex-shrink: 0; }
+  .ro .rv { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .ro .avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ro .rv .nm { font-size: 14px; font-weight: 700; }
+  .ro .rv .no-mono {
+    font-size: 14px; font-weight: 700; color: var(--primary);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .8px;
+  }
+  .auto-tag {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 10px; font-weight: 700; color: var(--primary);
+    background: var(--blue-bg); border-radius: 100px; padding: 3px 9px;
+  }
+
+  /* 提交与删除 */
+  .submit-btn {
+    width: 100%; height: 50px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    font-family: inherit;
+    box-shadow: 0 10px 22px rgba(1, 77, 178, 0.32);
+    transition: transform .15s, opacity .2s;
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { background: #C9D4E3; box-shadow: none; cursor: not-allowed; }
+  /* 底部保存栏 */
+  .save-bar {
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px 14px;
+    background: rgba(255, 255, 255, .97);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgba(15, 42, 86, .05);
+  }
+  .save-bar .submit-btn { flex: 1; }
+  .save-bar .bar-del {
+    width: 92px; height: 50px; flex-shrink: 0; border-radius: 14px;
+    border: 1.5px solid #FECACA; background: #FFF5F5; color: var(--red);
+    font-size: 15px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+    cursor: pointer; transition: transform .15s;
+  }
+  .save-bar .bar-del:active { transform: scale(0.98); }
+
+  /* ===== 底部弹层 ===== */
+  .mask {
+    position: absolute; inset: 0; background: rgba(7, 15, 30, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity .28s; z-index: 300;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 310;
+    background: #fff; border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform .32s cubic-bezier(.32, .72, .28, 1);
+    box-shadow: 0 -12px 40px rgba(7, 15, 30, 0.18);
+    display: flex; flex-direction: column; max-height: 70%;
+    padding-bottom: 18px;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sh-handle { height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .sh-handle::before { content: ''; width: 38px; height: 4px; border-radius: 2px; background: #E2E7EE; }
+  .sh-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 18px 12px; }
+  .sh-head .t { font-size: 17px; font-weight: 800; }
+  .sh-head .sh-x {
+    width: 28px; height: 28px; border-radius: 50%; border: none; background: #F0F2F7;
+    cursor: pointer; color: var(--muted); font-size: 13px; line-height: 28px; text-align: center;
+  }
+  .sh-body { overflow-y: auto; padding: 0 18px; display: flex; flex-direction: column; gap: 13px; }
+
+  /* 日历 */
+  .cal-card { background: #F7F9FC; border-radius: 16px; padding: 12px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-nav button {
+    width: 30px; height: 30px; border-radius: 9px; border: none; background: #fff;
+    cursor: pointer; color: var(--text); font-size: 16px; font-weight: 700;
+    box-shadow: 0 1px 4px rgba(15,42,86,.08);
+  }
+  .cal-nav button:disabled { color: #C6CFDC; background: #F1F3F7; cursor: not-allowed; }
+  .cal-nav .cal-t { font-size: 14.5px; font-weight: 800; }
+  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+  .cal-week span {
+    text-align: center; font-size: 10.5px; color: var(--muted); font-weight: 600;
+    padding: 4px 0;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-grid button {
+    height: 34px; border-radius: 10px; border: none; background: transparent;
+    font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer;
+    font-family: inherit; transition: all .15s;
+  }
+  .cal-grid button.out, .cal-grid button.off { color: #C6CFDC; }
+  .cal-grid button.off { cursor: not-allowed; }
+  .cal-grid button:not(.out):not(.off):hover { background: #E9F0FB; }
+  .cal-grid button.sel {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    box-shadow: 0 4px 10px rgba(1,77,178,.30);
+  }
+  .cal-grid button.today:not(.sel) {
+    color: var(--primary); font-weight: 800;
+    box-shadow: inset 0 0 0 1.5px var(--primary);
+  }
+  .cal-note { font-size: 10.5px; color: var(--faint); text-align: center; padding-top: 2px; }
+
+  /* 删除确认 */
+  .cf-ic {
+    width: 56px; height: 56px; margin: 6px auto 12px; border-radius: 50%;
+    background: var(--red-bg); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cf-t { font-size: 16px; font-weight: 800; text-align: center; }
+  .cf-s { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; line-height: 1.7; }
+  .cf-ops { display: flex; gap: 10px; margin-top: 14px; }
+  .cf-ops button {
+    flex: 1; height: 46px; border-radius: 13px; cursor: pointer;
+    font-size: 15px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+    transition: transform .15s;
+  }
+  .cf-ops button:active { transform: scale(0.97); }
+  .cf-ops .cf-no { border: 1px solid #DCE2EC; background: #fff; color: var(--sub); }
+  .cf-ops .cf-yes { border: none; background: linear-gradient(135deg, #F87171, #DC2626); color: #fff; }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 400;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">10:24</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="fe-content">
+        <div class="fe-nav">
+          <button class="back-btn" onclick="goBack()" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title" id="pageTitle">新增加油记录</span>
+        </div>
+
+        <div class="fe-body">
+          <!-- 车辆上下文 -->
+          <div class="ctx-card">
+            <span class="ctx-plate" id="plateChip">--</span>
+            <span class="ctx-m">
+              <span class="ctx-t" id="ctxTitle">新增加油记录</span>
+              <span class="ctx-s" id="ctxSub">为该车添加一条加油记录</span>
+            </span>
+          </div>
+
+          <!-- ① 加油信息 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">1</span><span class="t">加油信息</span><span class="sub"><span class="req">*</span> 必填</span></div>
+
+            <div class="field">
+              <div class="lab">加油日期<span class="req">*</span></div>
+              <button type="button" class="fp-btn on" id="dateBtn" onclick="openDateSheet()">
+                <span class="fp-ic" style="background:#EFF6FF">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" stroke="#014DB2" stroke-width="1.7"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </span>
+                <span class="fp-tx"><span class="fp-val" id="dateVal">--</span><span class="fp-tip">仅可选择今天及以前日期</span></span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+            <div class="field" style="margin-bottom:0">
+              <div class="lab">加油地点<span class="req">*</span></div>
+              <input class="txt-input" id="locInput" maxlength="40" placeholder="如：中石化南京新城加油站">
+            </div>
+          </div>
+
+          <!-- ② 金额信息 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">2</span><span class="t">金额信息</span><span class="sub"><span class="req">*</span> 必填</span></div>
+            <div class="two-col">
+              <div class="field">
+                <div class="lab">本次加油金额<span class="req">*</span></div>
+                <div class="money">
+                  <span class="cur">¥</span>
+                  <input class="txt-input" id="amountInput" inputmode="decimal" maxlength="9" placeholder="0.00">
+                </div>
+              </div>
+              <div class="field">
+                <div class="lab">油卡余额<span class="req">*</span></div>
+                <div class="money">
+                  <span class="cur">¥</span>
+                  <input class="txt-input" id="balanceInput" inputmode="decimal" maxlength="9" placeholder="0.00">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ 加油照片 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">3</span><span class="t">加油照片</span><span class="sub">至少 1 张 · 最多 9 张</span></div>
+            <div class="photo-grid" id="photoGrid">
+              <div class="photo-cell" id="addCell" onclick="document.getElementById('photoFile').click()">
+                <div class="ph">
+                  <div class="cam-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>
+                  </div>
+                  <span class="txt">拍摄 / 相册</span>
+                </div>
+              </div>
+            </div>
+            <div class="photo-foot">
+              <div class="photo-count">已上传 <b id="photoNum">0</b> / 9 张</div>
+              <button type="button" class="demo-link" onclick="addDemoPhoto()">＋ 示例照片</button>
+            </div>
+            <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="onPhoto(this)">
+          </div>
+
+          <!-- ④ 记录人 -->
+          <div class="f-card">
+            <div class="f-head"><span class="no">4</span><span class="t">记录人</span><span class="sub">系统自动生成 · 不可修改</span></div>
+            <div class="ro">
+              <span class="rk">驾驶员名称</span>
+              <span class="rv">
+                <span class="avatar">张</span>
+                <span class="nm">张三</span>
+              </span>
+            </div>
+            <div class="ro">
+              <span class="rk">记录人编号</span>
+              <span class="rv">
+                <span class="no-mono">10086</span>
+                <span class="auto-tag">系统自动生成</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部保存栏 -->
+        <div class="save-bar">
+          <button type="button" class="bar-del" id="delBarBtn" style="display:none" onclick="askDel()">删除</button>
+          <button class="submit-btn" id="saveBtn" onclick="saveFuel()">保存记录</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹层：日期 -->
+    <div class="mask" id="mask" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheetDate">
+      <div class="sh-handle"></div>
+      <div class="sh-head">
+        <span class="t">选择加油日期</span>
+        <button class="sh-x" onclick="closeSheet()">✕</button>
+      </div>
+      <div class="sh-body">
+        <div class="cal-card">
+          <div class="cal-nav">
+            <button type="button" id="calPrev" onclick="calNav(-1)">‹</button>
+            <span class="cal-t" id="calTitle">2026年9月</span>
+            <button type="button" id="calNext" onclick="calNav(1)">›</button>
+          </div>
+          <div class="cal-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div class="cal-note">蓝色为已选日期 · 仅可选择今天及以前日期</div>
+      </div>
+    </div>
+
+    <!-- 弹层：删除确认 -->
+    <div class="sheet" id="delSheet">
+      <div class="sh-handle"></div>
+      <div class="sh-body">
+        <div class="cf-ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="cf-t">删除这条加油记录？</div>
+        <div class="cf-s">删除后不可恢复，请确认<br>该操作仅删除本地演示数据</div>
+        <div class="cf-ops">
+          <button class="cf-no" onclick="closeSheet()">取消</button>
+          <button class="cf-yes" onclick="doDelete()">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_fuel_list';
+  /* 当前登录驾驶员（演示固定：张三） */
+  var ME = { name: '张三', no: '10086' };
+
+  var editId = null;      /* null = 新增 */
+  var curRec = null;      /* 编辑模式当前记录（用于展示编号） */
+  var PLATE = qs('plate');
+  var selDate = dstr(new Date());
+  var loc = '';
+  var photos = [];
+  var MAX_PHOTOS = 9;
+  var CAL = { y: 0, m: 0 };
+
+  /* ========== 工具 ========== */
+  function byId(id) { return document.getElementById(id); }
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function parseDate(s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function weekText(d) { return '周' + '日一二三四五六'[d.getDay()]; }
+  function todayStr() { return dstr(new Date()); }
+  function dateText(ds) { var d = parseDate(ds); return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekText(d); }
+  function isMine(r) { return r.driverName === ME.name && r.driverNo === ME.no; }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
+
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); }
+
+  /* ===== 记录编号 / 创建时间 =====
+     编号：JY + 创建日(YYYYMMDD) + 当日流水(2 位自 01)，
+     新增时自动生成并固定（编辑不改号）；创建时间精确到秒 */
+  function nowStr() {
+    var d = new Date();
+    return dstr(d) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+  }
+  function genNewCode(list) {
+    var d = new Date();
+    var day = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var max = 0;
+    list.forEach(function (x) {
+      var m = /^JY(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m && m[1] === day) max = Math.max(max, +m[2]);
+    });
+    return 'JY' + day + '-' + p2(max + 1);
+  }
+  function ensureMeta(list) {
+    /* 兼容旧数据：为缺失记录补 createdAt / code */
+    var changed = false;
+    var max = {};
+    list.forEach(function (x) {
+      if (!x.createdAt) {
+        var i = list.indexOf(x);
+        var dd = x.date || todayStr();
+        var hh = p2(8 + (i * 3) % 10), mi = p2((i * 13) % 60), ss = p2((i * 29) % 60);
+        x.createdAt = dd + ' ' + hh + ':' + mi + ':' + ss;
+        changed = true;
+      }
+    });
+    list.forEach(function (x) {
+      var m = /^JY(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m) max[m[1]] = Math.max(max[m[1]] || 0, +m[2]);
+    });
+    list.forEach(function (x) {
+      if (x.code) return;
+      var day = (x.createdAt || todayStr()).slice(0, 10).replace(/-/g, '');
+      var n = (max[day] || 0) + 1; max[day] = n;
+      x.code = 'JY' + day + '-' + p2(n);
+      changed = true;
+    });
+    return changed;
+  }
+
+  /* ========== toast ========== */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = byId('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+
+  /* ========== 弹层 ========== */
+  function showSheet(id) { byId(id).classList.add('show'); byId('mask').classList.add('show'); }
+  function closeSheet() {
+    ['sheetDate', 'delSheet'].forEach(function (id) {
+      byId(id).classList.remove('show');
+    });
+    byId('mask').classList.remove('show');
+  }
+
+  /* ========== 日期：日历（仅今天及以前） ========== */
+  function openDateSheet() {
+    var d = parseDate(selDate);
+    CAL.y = d.getFullYear(); CAL.m = d.getMonth();
+    buildCal();
+    showSheet('sheetDate');
+  }
+  function calNav(delta) {
+    var now = new Date();
+    if (delta > 0 && CAL.y === now.getFullYear() && CAL.m === now.getMonth()) { return; }
+    CAL.m += delta;
+    if (CAL.m < 0) { CAL.m = 11; CAL.y--; }
+    if (CAL.m > 11) { CAL.m = 0; CAL.y++; }
+    buildCal();
+  }
+  function buildCal() {
+    byId('calTitle').textContent = CAL.y + '年' + (CAL.m + 1) + '月';
+    var now = new Date();
+    var tStr = dstr(now);
+    var first = new Date(CAL.y, CAL.m, 1);
+    var startDow = first.getDay();
+    var dim = new Date(CAL.y, CAL.m + 1, 0).getDate();
+    var prevDim = new Date(CAL.y, CAL.m, 0).getDate();
+    var h = '';
+    for (var i = 0; i < 42; i++) {
+      var cell = i - startDow + 1;
+      var d, out;
+      if (cell < 1) { d = prevDim + cell; out = true; }
+      else if (cell > dim) { d = cell - dim; out = true; }
+      else { d = cell; out = false; }
+      var y = CAL.y, m = CAL.m;
+      if (out && cell < 1) { m = CAL.m - 1; if (m < 0) { m = 11; y--; } }
+      if (out && cell > dim) { m = CAL.m + 1; if (m > 11) { m = 0; y++; } }
+      var ds = y + '-' + p2(m + 1) + '-' + p2(d);
+      var cls = out ? 'out' : '';
+      var off = !out && ds > tStr;
+      if (off) cls += ' off';
+      if (!out && !off) {
+        if (ds === selDate) cls += ' sel';
+        else if (ds === tStr) cls += ' today';
+      }
+      h += '<button type="button" class="' + cls + '"' +
+        (!out && !off ? ' onclick="pickDate(\'' + ds + '\')"' : '') + '>' + d + '</button>';
+    }
+    byId('calGrid').innerHTML = h;
+    /* 当月不允许再往后翻 */
+    byId('calNext').disabled = (CAL.y === now.getFullYear() && CAL.m === now.getMonth());
+  }
+  function pickDate(ds) {
+    if (ds > todayStr()) { toast('不能选择未来日期'); return; }
+    selDate = ds;
+    byId('dateVal').textContent = dateText(ds);
+    byId('dateVal').classList.remove('ph');
+    byId('dateBtn').classList.add('on');
+    closeSheet();
+  }
+
+  /* ========== 图片 ========== */
+  function demoImg(k) {
+    var colors = [
+      { bg: '#EAF1FC', c1: '#014DB2', c2: '#B9D2F0' },
+      { bg: '#ECFDF5', c1: '#047857', c2: '#A7F3D0' },
+      { bg: '#FFFBEB', c1: '#D97706', c2: '#FDE68A' }
+    ];
+    var c = colors[k % colors.length];
+    var s = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'>" +
+      "<rect width='320' height='240' rx='16' fill='" + c.bg + "'/>" +
+      "<rect x='20' y='20' width='280' height='200' rx='12' fill='#fff' opacity='.9'/>" +
+      "<rect x='40' y='44' width='90' height='16' rx='8' fill='" + c.c1 + "'/>" +
+      "<rect x='140' y='44' width='130' height='16' rx='8' fill='" + c.c2 + "' opacity='.8'/>" +
+      "<rect x='40' y='74' width='240' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='92' width='200' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='126' width='160' height='12' rx='6' fill='" + c.c1 + "' opacity='.8'/>" +
+      "<rect x='40' y='158' width='110' height='34' rx='17' fill='" + c.c1 + "'/>" +
+      "<rect x='170' y='158' width='110' height='34' rx='17' fill='" + c.c2 + "' opacity='.75'/>" +
+      "</svg>";
+    return 'data:image/svg+xml,' + encodeURIComponent(s);
+  }
+  function addDemoPhoto() {
+    if (photos.length >= MAX_PHOTOS) { toast('最多上传 ' + MAX_PHOTOS + ' 张照片'); return; }
+    photos.push(demoImg(photos.length));
+    renderPhotos();
+  }
+  function onPhoto(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (photos.length >= MAX_PHOTOS) { toast('最多上传 ' + MAX_PHOTOS + ' 张照片'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      photos.push(e.target.result);
+      renderPhotos();
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+  function removePhoto(i) {
+    photos.splice(i, 1);
+    renderPhotos();
+  }
+  function renderPhotos() {
+    var grid = byId('photoGrid');
+    grid.innerHTML = '';
+    photos.forEach(function (src, i) {
+      var cell = document.createElement('div');
+      cell.className = 'photo-cell has';
+      cell.innerHTML =
+        '<img src="' + src + '" alt="加油照片' + (i + 1) + '">' +
+        '<button class="del" onclick="event.stopPropagation();removePhoto(' + i + ')">✕</button>';
+      grid.appendChild(cell);
+    });
+    if (photos.length < MAX_PHOTOS) {
+      var add = document.createElement('div');
+      add.className = 'photo-cell';
+      add.id = 'addCell';
+      add.onclick = function () { byId('photoFile').click(); };
+      add.innerHTML =
+        '<div class="ph"><div class="cam-box">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>' +
+        '</div><span class="txt">拍摄 / 相册</span></div>';
+      grid.appendChild(add);
+    }
+    byId('photoNum').textContent = photos.length;
+  }
+
+  /* ========== 校验错误标记 ========== */
+  function markErr(id) {
+    var el = byId(id);
+    el.classList.add('err');
+    setTimeout(function () { el.classList.remove('err'); }, 1800);
+  }
+
+  /* ========== 页面上下文 ========== */
+  function fillCtx() {
+    byId('plateChip').textContent = PLATE;
+    byId('ctxTitle').textContent = editId ? '编辑加油记录' : '新增加油记录';
+    byId('ctxSub').textContent = editId
+      ? '记录编号 ' + (curRec && curRec.code ? curRec.code : '--')
+      : '为该车添加一条加油记录';
+  }
+
+  /* ========== 载入 / 保存 ========== */
+  function parseQuery() {
+    var q = location.search;
+    if (q.indexOf('id=') < 0) return null;
+    return decodeURIComponent(q.split('id=')[1].split('&')[0]);
+  }
+
+  function initForm() {
+    /* 默认日期（今天）展示 */
+    byId('dateVal').textContent = dateText(selDate);
+    byId('dateBtn').classList.add('on');
+    renderPhotos();
+
+    var qid = parseQuery();
+    if (!qid) {
+      /* 新增模式：需车辆参数；无参直开（如预览）回退演示车 */
+      if (!PLATE) PLATE = '苏A·12345';
+      fillCtx();
+      return;
+    }
+
+    /* 编辑模式 */
+    var list = load();
+    if (ensureMeta(list)) save(list);
+    var rec = null;
+    list.forEach(function (x) { if (x.id === qid) rec = x; });
+    if (!rec) {
+      toast('未找到该加油记录');
+      setTimeout(function () { if (PLATE) location.href = 'fuel-records.html?plate=' + encodeURIComponent(PLATE); else goBack(); }, 900);
+      return;
+    }
+    if (!isMine(rec)) {
+      toast('仅可修改自己创建的记录');
+      setTimeout(function () { location.href = 'fuel-records.html?plate=' + encodeURIComponent(rec.plate); }, 900);
+      return;
+    }
+    editId = qid;
+    curRec = rec;
+    PLATE = rec.plate;
+    selDate = rec.date;
+
+    byId('pageTitle').textContent = '编辑加油记录';
+    byId('saveBtn').textContent = '保存修改';
+    byId('delBarBtn').style.display = 'block';
+    byId('dateVal').textContent = dateText(selDate);
+    byId('locInput').value = rec.loc || '';
+    byId('amountInput').value = rec.amount || '';
+    byId('balanceInput').value = rec.balance || '';
+    photos = (rec.photos || []).slice();
+    renderPhotos();
+    fillCtx();
+  }
+
+  function saveFuel() {
+    var amt = byId('amountInput').value.trim();
+    var bal = byId('balanceInput').value.trim();
+    var place = byId('locInput').value.trim();
+
+    if (!selDate) { toast('请选择加油日期'); return; }
+    if (!place) { toast('请填写加油地点'); markErr('locInput'); return; }
+    if (!amt) { toast('请填写本次加油金额'); markErr('amountInput'); return; }
+    if (!/^\d+(\.\d{1,2})?$/.test(amt) || Number(amt) <= 0) {
+      toast('加油金额需为大于 0 的数字'); markErr('amountInput'); return;
+    }
+    if (bal === '') { toast('请填写油卡余额'); markErr('balanceInput'); return; }
+    if (!/^\d+(\.\d{1,2})?$/.test(bal)) {
+      toast('油卡余额格式不正确'); markErr('balanceInput'); return;
+    }
+    if (!photos.length) { toast('请至少上传 1 张加油照片'); return; }
+
+    var list = load();
+    if (ensureMeta(list)) { /* 旧数据补齐后随本次一并落库 */ }
+    var newCode = null;
+    if (editId) {
+      list.forEach(function (x) {
+        if (x.id === editId) {
+          x.date = selDate; x.loc = place;
+          x.amount = amt; x.balance = bal;
+          x.photos = photos.slice();
+          /* 记录编号 / 创建时间一经生成固定不变 */
+        }
+      });
+    } else {
+      newCode = genNewCode(list);
+      list.push({
+        id: 'F' + Date.now() + Math.floor(Math.random() * 90 + 10),
+        code: newCode,
+        createdAt: nowStr(),
+        plate: PLATE,
+        date: selDate, loc: place,
+        amount: amt, balance: bal,
+        photos: photos.slice(),
+        driverName: ME.name, driverNo: ME.no
+      });
+    }
+    save(list);
+
+    var btn = byId('saveBtn');
+    btn.disabled = true;
+    btn.textContent = editId ? '修改成功 ✓' : '新增成功 ✓';
+    toast(editId
+      ? '加油记录修改成功'
+      : newCode ? '加油记录新增成功 · 编号 ' + newCode : '加油记录新增成功');
+    setTimeout(function () { location.href = 'fuel-records.html?plate=' + encodeURIComponent(PLATE); }, 900);
+  }
+
+  /* ========== 删除 ========== */
+  function askDel() { showSheet('delSheet'); }
+  function doDelete() {
+    var list = load().filter(function (x) { return x.id !== editId; });
+    save(list);
+    closeSheet();
+    toast('加油记录已删除');
+    setTimeout(function () { location.href = 'fuel-records.html?plate=' + encodeURIComponent(PLATE); }, 700);
+  }
+
+  /* ========== 返回 ========== */
+  function goBack() {
+    /* 编辑页从加油记录列表进入：直接返回对应车辆记录列表，不依赖历史栈 */
+    if (PLATE) { location.href = 'fuel-records.html?plate=' + encodeURIComponent(PLATE); return; }
+    if (window.history && history.length > 1) { history.back(); return; }
+    location.href = 'vehicles.html';
+  }
+
+  /* ========== 启动 ========== */
+  initForm();
+</script>
+</body>
+</html>

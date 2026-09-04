@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 车辆检查</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --green: #10B981;
+    --green-2: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --red-2: #B91C1C;
+    --red-bg: #FEF2F2;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .vc-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .vc-content::-webkit-scrollbar { display: none; }
+
+  .vc-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative; border-bottom: 1px solid #EEF0F5;
+    background: var(--bg);
+  }
+  .vc-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: transform .15s;
+  }
+  .vc-nav .back-btn:active { transform: scale(0.9); }
+  .vc-nav .title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 700; }
+
+  .vc-body { flex: 1; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* 步骤进度 */
+  .step-head {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .step-head .snum {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+  .step-head .stxt { flex: 1; min-width: 0; }
+  .step-head .stxt .t { font-size: 14px; font-weight: 700; }
+  .step-head .stxt .s { font-size: 11px; color: var(--muted); }
+  .step-bar { width: 84px; height: 6px; border-radius: 3px; background: #E5EAF3; overflow: hidden; flex-shrink: 0; }
+  .step-bar > span { display: block; height: 100%; width: 42%; border-radius: 3px; background: linear-gradient(90deg, #0A5FD4, #4C8DF0); }
+
+  /* 通用卡片 */
+  .sec-card {
+    background: #fff; border-radius: 14px; padding: 13px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+  .sec-head .h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .sec-head .h3 .bar { width: 4px; height: 14px; border-radius: 2px; background: linear-gradient(180deg, #0A5FD4, #014DB2); }
+  .mini-badge {
+    font-size: 10.5px; font-weight: 700; border-radius: 100px; padding: 2px 9px;
+    background: #F3F4F6; color: var(--sub);
+  }
+  .mini-badge.ok { background: var(--green-bg); color: var(--green-2); }
+  .mini-badge.bad { background: var(--red-bg); color: var(--red-2); }
+
+  /* 360 环视网格 */
+  .cir-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .cir-cell {
+    background: #F8FAFD; border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px; display: flex; flex-direction: column; gap: 7px; align-items: center;
+    transition: border-color .2s;
+  }
+  .cir-cell.err { border-color: #FCA5A5; background: #FFF8F8; grid-column: 1 / -1; }
+  .cir-cell.err .cir-shot { height: 96px; }
+  .cir-abn { width: 100%; }
+  .cir-name { font-size: 11.5px; font-weight: 700; color: var(--text); align-self: flex-start; display: flex; align-items: center; gap: 4px; }
+  .cir-name .idx {
+    width: 15px; height: 15px; border-radius: 50%; background: #E5EDF9; color: var(--primary);
+    font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .cir-shot {
+    width: 100%; height: 64px; border-radius: 8px; overflow: hidden; cursor: pointer;
+    border: 1.5px dashed #C6D2E4; background: #F0F3F9;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s;
+  }
+  .cir-shot .ph { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); }
+  .cir-shot .ph .txt { font-size: 9.5px; }
+  .cir-shot img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+  /* 正常/异常 分段开关 */
+  .seg {
+    display: flex; background: #EEF0F5; border-radius: 7px; padding: 2px; width: 100%;
+  }
+  .seg button {
+    flex: 1; border: none; background: transparent; font-family: inherit;
+    font-size: 10.5px; font-weight: 600; padding: 4px 0; border-radius: 5px;
+    color: #8A94A6; cursor: pointer; transition: background .15s, color .15s;
+  }
+  .seg button.ok.on { background: #fff; color: var(--green-2); box-shadow: 0 1px 4px rgba(4,120,87,.18); }
+  .seg button.bad.on { background: #fff; color: var(--red-2); box-shadow: 0 1px 4px rgba(185,28,28,.18); }
+  .seg.sm { width: 96px; }
+  .seg.sm button { font-size: 11px; padding: 4px 0; }
+
+  /* 重点检查分组 */
+  #groups { display: flex; flex-direction: column; gap: 10px; }
+  .grp {
+    background: #fff; border-radius: 14px; box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    overflow: hidden;
+  }
+  .grp-head {
+    display: flex; align-items: center; gap: 9px; padding: 12px 14px; cursor: pointer;
+    user-select: none;
+  }
+  .grp-head .gicon {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .grp-head .gname { flex: 1; min-width: 0; }
+  .grp-head .gname .n { font-size: 13.5px; font-weight: 700; }
+  .grp-head .gname .c { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+  .grp-head .chev { transition: transform .2s; flex-shrink: 0; }
+  .grp.open .grp-head .chev { transform: rotate(90deg); }
+  .grp-body { display: none; padding: 0 14px 6px; }
+  .grp.open .grp-body { display: block; }
+
+  .it-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid #F3F5F9;
+  }
+  .it-row:last-child { border-bottom: none; }
+  .it-name { font-size: 13px; color: var(--text); font-weight: 500; flex: 1; min-width: 0; }
+  .it-row.abn .it-name { color: var(--red-2); font-weight: 600; }
+
+  /* 异常填写面板 */
+  .ab-panel {
+    display: none; margin: 0 0 10px; padding: 10px 11px;
+    background: #FFF8F8; border: 1px solid #FBD5D5; border-radius: 10px;
+  }
+  .ab-panel.show { display: block; }
+  .ab-field { margin-bottom: 9px; }
+  .ab-field:last-child { margin-bottom: 0; }
+  .ab-label { font-size: 11px; font-weight: 700; color: var(--red-2); margin-bottom: 5px; }
+  .ab-label .req { color: var(--red); margin-left: 2px; }
+  .ab-select {
+    width: 100%; height: 32px; border-radius: 8px; border: 1px solid #E3D5D5;
+    background: #fff; padding: 0 8px; font-family: inherit; font-size: 12px; color: var(--text);
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none'><path d='M6 9l6 6 6-6' stroke='%238A94A6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  .ab-up {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ab-up-btn {
+    width: 54px; height: 54px; border-radius: 9px; border: 1.5px dashed #E0A6A6;
+    background: #fff; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ab-up-btn:active { transform: scale(.95); }
+  .ab-up-img {
+    width: 54px; height: 54px; border-radius: 9px; overflow: hidden; flex-shrink: 0;
+    display: none; border: 1px solid #E3D5D5;
+  }
+  .ab-up-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ab-up-tip { font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+  .ab-text {
+    width: 100%; min-height: 44px; border-radius: 8px; border: 1px solid #E3D5D5;
+    background: #fff; padding: 7px 9px; font-family: inherit; font-size: 12px; color: var(--text);
+    resize: none; outline: none; line-height: 1.5;
+  }
+  .ab-text:focus { border-color: var(--red); }
+  .ab-text::placeholder { color: #B6BDC9; }
+
+  /* 汇总与提交 */
+  .stat-bar {
+    display: flex; gap: 9px;
+  }
+  .stat-cell {
+    flex: 1; background: #fff; border-radius: 12px; padding: 10px 12px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat-cell .k { font-size: 10.5px; color: var(--muted); }
+  .stat-cell .v { font-size: 16px; font-weight: 800; font-family: Inter, sans-serif; }
+  .stat-cell .v.green { color: var(--green-2); }
+  .stat-cell .v.red { color: var(--red-2); }
+  .stat-cell .v.blue { color: var(--primary); }
+
+  .submit-btn {
+    margin-top: 2px; height: 48px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 1px;
+    box-shadow: 0 10px 22px rgba(1, 77, 178, 0.32);
+    transition: transform .15s, opacity .2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .submit-btn:active { transform: scale(.98); }
+  .submit-tip { text-align: center; font-size: 11px; color: var(--muted); }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: 60px; z-index: 200;
+    background: rgba(10,22,40,.88); color: #fff;
+    font-size: 13px; padding: 10px 18px; border-radius: 100px;
+    opacity: 0; pointer-events: none; transition: opacity .25s, bottom .25s;
+    white-space: nowrap; max-width: 86%; overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.show { opacity: 1; bottom: 76px; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">09:20</span>
+        <span class="capsule">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </span>
+      </div>
+
+      <div class="vc-content">
+        <div class="vc-nav">
+          <button class="back-btn" onclick="location.href='home.html'" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">车辆检查</span>
+        </div>
+
+        <div class="vc-body">
+          <!-- 步骤进度 -->
+          <div class="step-head">
+            <span class="snum">3</span>
+            <div class="stxt">
+              <div class="t">车辆检查</div>
+              <div class="s">第 3 步 · 共 7 步</div>
+            </div>
+            <div class="step-bar"><span></span></div>
+          </div>
+
+          <!-- 360 环视检查 -->
+          <div class="sec-card">
+            <div class="sec-head">
+              <span class="h3"><span class="bar"></span>车辆360°环视检查</span>
+              <span class="mini-badge ok" id="cirBadge">已拍摄 0/6</span>
+            </div>
+            <div class="cir-grid" id="cirGrid"></div>
+          </div>
+
+          <!-- 重点检查项目（JS 生成） -->
+          <div id="groups"></div>
+
+          <!-- 汇总 -->
+          <div class="stat-bar">
+            <div class="stat-cell">
+              <span class="k">重点检查项</span>
+              <span class="v blue" id="statTotal">--</span>
+            </div>
+            <div class="stat-cell">
+              <span class="k">正常</span>
+              <span class="v green" id="statOk">--</span>
+            </div>
+            <div class="stat-cell">
+              <span class="k">异常</span>
+              <span class="v red" id="statBad">--</span>
+            </div>
+          </div>
+
+          <button class="submit-btn" onclick="submitCheck()">提交检查结果</button>
+          <div class="submit-tip">默认全部正常，请根据实际车况调整；异常项须选择分类并上传照片、填写说明</div>
+        </div>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+
+<script>
+  /* ---------------- 数据定义 ---------------- */
+  var CIR = [
+    { key: 'lf', name: '左前' }, { key: 'cf', name: '正前' }, { key: 'rf', name: '右前' },
+    { key: 'rb', name: '右后' }, { key: 'cb', name: '正后' }, { key: 'lb', name: '左后' }
+  ];
+  var GROUPS = [
+    { id: 'g1', name: '车容车貌', items: ['车牌', '保险标志', '车身外观', '前挡风玻璃', '车厢', '后备箱'] },
+    { id: 'g2', name: '灯光及设备', items: ['转向灯', '制动灯', '示廓灯', '危险警报灯', '雾灯', '仪表盘', '卫星定位', '导航', '空调', '车门', '车窗', '雨刮器', '座椅', '安全带'] },
+    { id: 'g3', name: '安全性能', items: ['发动机', '润滑油', '冷却液', '制动液', '制动系统', '转向', '轮胎'] },
+    { id: 'g4', name: '随车物品', items: ['灭火器', '三角警告牌', '安全锤', '牵引绳', '应急手电', '工具箱', '千斤顶', '备胎'] }
+  ];
+  var AB_CATS = ['碰擦', '划痕', '凹陷', '裂纹', '灯光故障', '轮胎异常', '制动异常', '发动机异常', '设备故障', '随车物品缺失', '其他'];
+
+  var camTarget = null; /* {type:'cir'|'ab', id} */
+
+  /* ---------------- 360 环视 ---------------- */
+  var cirState = {}; /* key: {photo, abn, cat, desc, aphoto} */
+  CIR.forEach(function (c) { cirState[c.key] = { photo: '', abn: false, cat: '', desc: '', aphoto: '' }; });
+
+  function buildCir() {
+    var grid = document.getElementById('cirGrid');
+    CIR.forEach(function (c, i) {
+      var cell = document.createElement('div');
+      cell.className = 'cir-cell';
+      cell.id = 'cell-' + c.key;
+      cell.innerHTML =
+        '<span class="cir-name"><span class="idx">' + (i + 1) + '</span>' + c.name + '</span>' +
+        '<div class="cir-shot" onclick="takePhoto(\'cir\', \'' + c.key + '\')">' +
+          '<div class="ph">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#8A94A6" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#8A94A6" stroke-width="1.6"/></svg>' +
+            '<span class="txt">点击拍摄</span>' +
+          '</div>' +
+          '<img id="cirImg-' + c.key + '" alt="' + c.name + '">' +
+        '</div>' +
+        '<div class="seg">' +
+          '<button class="ok on" id="cirOk-' + c.key + '" onclick="setCir(\'' + c.key + '\', false)">正常</button>' +
+          '<button class="bad" id="cirBad-' + c.key + '" onclick="setCir(\'' + c.key + '\', true)">异常</button>' +
+        '</div>' +
+        '<div class="cir-abn ab-panel" id="cirAbn-' + c.key + '">' +
+          '<div class="ab-field">' +
+            '<div class="ab-label">异常分类<span class="req">*</span></div>' +
+            '<select class="ab-select" id="cirCat-' + c.key + '" onchange="cirState[\'' + c.key + '\'].cat=this.value">' +
+              '<option value="">请选择异常分类</option>' +
+              AB_CATS.map(function (t) { return '<option value="' + t + '">' + t + '</option>'; }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="ab-field">' +
+            '<div class="ab-label">异常部位照片<span class="req">*</span></div>' +
+            '<div class="ab-up">' +
+              '<div class="ab-up-btn" onclick="takePhoto(\'cirab\', \'' + c.key + '\')">' +
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#B91C1C" stroke-width="2" stroke-linecap="round"/></svg>' +
+              '</div>' +
+              '<div class="ab-up-img" id="cirAbnImgBox-' + c.key + '"><img id="cirAbnImg-' + c.key + '" alt="异常照片"></div>' +
+              '<div class="ab-up-tip">仅支持相机拍摄<br>近景拍摄异常部位</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ab-field">' +
+            '<div class="ab-label">文字说明<span class="req">*</span></div>' +
+            '<textarea class="ab-text" id="cirDesc-' + c.key + '" rows="2" placeholder="请描述该方位异常情况（必填）" oninput="cirState[\'' + c.key + '\'].desc=this.value"></textarea>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(cell);
+    });
+    updateCirBadge();
+  }
+
+  function setCir(key, abn) {
+    cirState[key].abn = abn;
+    document.getElementById('cirOk-' + key).className = abn ? 'ok' : 'ok on';
+    document.getElementById('cirBad-' + key).className = abn ? 'bad on' : 'bad';
+    var cell = document.getElementById('cell-' + key);
+    cell.className = abn ? 'cir-cell err' : 'cir-cell';
+    var panel = document.getElementById('cirAbn-' + key);
+    if (abn) {
+      panel.classList.add('show');
+      if (!cirState[key].photo) {
+        toast('「' + nameOfCir(key) + '」已标记异常，请拍摄该方位照片');
+      }
+    } else {
+      panel.classList.remove('show');
+      cirState[key].cat = ''; cirState[key].desc = ''; cirState[key].aphoto = '';
+      var sel = document.getElementById('cirCat-' + key);
+      var ta = document.getElementById('cirDesc-' + key);
+      var img = document.getElementById('cirAbnImg-' + key);
+      var box = document.getElementById('cirAbnImgBox-' + key);
+      if (sel) sel.value = '';
+      if (ta) ta.value = '';
+      if (img) img.removeAttribute('src');
+      if (box) box.style.display = 'none';
+    }
+    updateCirBadge();
+  }
+
+  function nameOfCir(key) {
+    for (var i = 0; i < CIR.length; i++) if (CIR[i].key === key) return CIR[i].name;
+    return key;
+  }
+
+  function updateCirBadge() {
+    var n = 0;
+    CIR.forEach(function (c) { if (cirState[c.key].photo) n++; });
+    var el = document.getElementById('cirBadge');
+    el.textContent = '已拍摄 ' + n + '/6';
+    var anyAbn = CIR.some(function (c) { return cirState[c.key].abn; });
+    el.className = 'mini-badge ' + (n === 6 && !anyAbn ? 'ok' : (anyAbn ? 'bad' : ''));
+    if (n === 6 && anyAbn) el.className = 'mini-badge bad';
+  }
+
+  /* ---------------- 重点检查项目 ---------------- */
+  var itState = {}; /* groupId::item: {abn, cat, desc, photo} */
+  var groupOpen = { g1: true, g2: true, g3: true, g4: true };
+
+  function buildGroups() {
+    var wrap = document.getElementById('groups');
+    GROUPS.forEach(function (g) {
+      g.items.forEach(function (it) { itState[g.id + '::' + it] = { abn: false, cat: '', desc: '', photo: '' }; });
+
+      var grp = document.createElement('div');
+      grp.className = 'grp open';
+      grp.id = 'grp-' + g.id;
+
+      var head = document.createElement('div');
+      head.className = 'grp-head';
+      head.onclick = function () { grp.classList.toggle('open'); };
+      head.innerHTML =
+        '<span class="gicon">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#014DB2" stroke-width="1.8"/><path d="M12 7.5V12l3 1.8" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '</span>' +
+        '<span class="gname"><span class="n">' + g.name + '</span><span class="c" id="gc-' + g.id + '"></span></span>' +
+        '<span class="mini-badge ok" id="gb-' + g.id + '">全部正常</span>' +
+        '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#8A94A6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      var body = document.createElement('div');
+      body.className = 'grp-body';
+
+      g.items.forEach(function (it) {
+        var uid = g.id + '::' + it;
+        var row = document.createElement('div');
+        row.className = 'it-row';
+        row.id = 'row-' + uid;
+        row.innerHTML =
+          '<span class="it-name">' + it + '</span>' +
+          '<div class="seg sm">' +
+            '<button class="ok on" id="ok-' + uid + '" onclick="setItem(\'' + g.id + '\', \'' + it + '\', false)">正常</button>' +
+            '<button class="bad" id="bad-' + uid + '" onclick="setItem(\'' + g.id + '\', \'' + it + '\', true)">异常</button>' +
+          '</div>';
+
+        var panel = document.createElement('div');
+        panel.className = 'ab-panel';
+        panel.id = 'ab-' + uid;
+        panel.innerHTML =
+          '<div class="ab-field">' +
+            '<div class="ab-label">异常分类<span class="req">*</span></div>' +
+            '<select class="ab-select" id="cat-' + uid + '" onchange="itState[\'' + uid + '\'].cat=this.value">' +
+              '<option value="">请选择异常分类</option>' +
+              AB_CATS.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="ab-field">' +
+            '<div class="ab-label">上传照片<span class="req">*</span></div>' +
+            '<div class="ab-up">' +
+              '<div class="ab-up-btn" onclick="takePhoto(\'ab\', \'' + uid + '\')">' +
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#B91C1C" stroke-width="2" stroke-linecap="round"/></svg>' +
+              '</div>' +
+              '<div class="ab-up-img" id="abimgbox-' + uid + '"><img id="abimg-' + uid + '" alt="异常照片"></div>' +
+              '<div class="ab-up-tip">仅支持相机拍摄<br>现场拍摄异常部位</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ab-field">' +
+            '<div class="ab-label">文字说明<span class="req">*</span></div>' +
+            '<textarea class="ab-text" id="desc-' + uid + '" rows="2" placeholder="请描述异常情况（必填）" oninput="itState[\'' + uid + '\'].desc=this.value"></textarea>' +
+          '</div>';
+
+        body.appendChild(row);
+        body.appendChild(panel);
+      });
+
+      grp.appendChild(head);
+      grp.appendChild(body);
+      wrap.appendChild(grp);
+      updateGroupBadge(g.id);
+    });
+    updateStat();
+  }
+
+  function setItem(gid, item, abn) {
+    var uid = gid + '::' + item;
+    var st = itState[uid];
+    st.abn = abn;
+    if (!abn) { st.cat = ''; st.desc = ''; st.photo = ''; }
+    document.getElementById('ok-' + uid).className = abn ? 'ok' : 'ok on';
+    document.getElementById('bad-' + uid).className = abn ? 'bad on' : 'bad';
+    document.getElementById('row-' + uid).className = abn ? 'it-row abn' : 'it-row';
+    document.getElementById('ab-' + uid).className = abn ? 'ab-panel show' : 'ab-panel';
+    if (!abn) {
+      var sel = document.getElementById('cat-' + uid);
+      var ta = document.getElementById('desc-' + uid);
+      var img = document.getElementById('abimg-' + uid);
+      var box = document.getElementById('abimgbox-' + uid);
+      if (sel) sel.value = '';
+      if (ta) ta.value = '';
+      if (img) img.removeAttribute('src');
+      if (box) box.style.display = 'none';
+    }
+    updateGroupBadge(gid);
+    updateStat();
+  }
+
+  function updateGroupBadge(gid) {
+    var g = null;
+    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].id === gid) g = GROUPS[i];
+    var bad = 0;
+    g.items.forEach(function (it) { if (itState[gid + '::' + it].abn) bad++; });
+    var b = document.getElementById('gb-' + gid);
+    var c = document.getElementById('gc-' + gid);
+    b.textContent = bad === 0 ? '全部正常' : '异常 ' + bad + ' 项';
+    b.className = 'mini-badge ' + (bad === 0 ? 'ok' : 'bad');
+    c.textContent = '共 ' + g.items.length + ' 项';
+  }
+
+  function updateStat() {
+    var total = 0, bad = 0;
+    GROUPS.forEach(function (g) {
+      g.items.forEach(function (it) {
+        total++;
+        if (itState[g.id + '::' + it].abn) bad++;
+      });
+    });
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statOk').textContent = total - bad;
+    document.getElementById('statBad').textContent = bad;
+  }
+
+  /* ---------------- 拍照 ---------------- */
+  function takePhoto(type, id) {
+    camTarget = { type: type, id: id };
+    document.getElementById('camInput').click();
+  }
+
+  document.getElementById('camInput').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f || !camTarget) { this.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      if (camTarget.type === 'cir') {
+        var key = camTarget.id;
+        cirState[key].photo = e.target.result;
+        var img = document.getElementById('cirImg-' + key);
+        img.src = e.target.result;
+        img.style.display = 'block';
+        var shot = img.parentElement;
+        shot.style.borderStyle = 'solid';
+        shot.style.borderColor = '#C6D2E4';
+        updateCirBadge();
+      } else if (camTarget.type === 'cirab') {
+        var ck = camTarget.id;
+        cirState[ck].aphoto = e.target.result;
+        var aimg = document.getElementById('cirAbnImg-' + ck);
+        aimg.src = e.target.result;
+        document.getElementById('cirAbnImgBox-' + ck).style.display = 'block';
+      } else {
+        var uid = camTarget.id;
+        itState[uid].photo = e.target.result;
+        var img2 = document.getElementById('abimg-' + uid);
+        img2.src = e.target.result;
+        document.getElementById('abimgbox-' + uid).style.display = 'block';
+      }
+    };
+    reader.readAsDataURL(f);
+    this.value = '';
+  });
+
+  /* ---------------- 提交校验 ---------------- */
+  function submitCheck() {
+    var miss = [];
+    CIR.forEach(function (c) { if (!cirState[c.key].photo) miss.push(c.name); });
+    if (miss.length) { toast('请完成360°环视拍照：' + miss.join('、')); return; }
+
+    for (var k = 0; k < CIR.length; k++) {
+      var ck = CIR[k], cs = cirState[ck.key];
+      if (cs.abn) {
+        if (!cs.cat) { toast('环视「' + ck.name + '」请选择异常分类'); return; }
+        if (!cs.aphoto) { toast('环视「' + ck.name + '」请上传异常部位照片'); return; }
+        if (!cs.desc.trim()) { toast('环视「' + ck.name + '」请填写异常说明'); return; }
+      }
+    }
+
+    for (var i = 0; i < GROUPS.length; i++) {
+      var g = GROUPS[i];
+      for (var j = 0; j < g.items.length; j++) {
+        var uid = g.id + '::' + g.items[j];
+        var st = itState[uid];
+        if (st.abn) {
+          if (!st.cat) { toast('「' + g.items[j] + '」请选择异常分类'); return; }
+          if (!st.photo) { toast('「' + g.items[j] + '」请上传异常照片'); return; }
+          if (!st.desc.trim()) { toast('「' + g.items[j] + '」请填写异常说明'); return; }
+        }
+      }
+    }
+    var bad = document.getElementById('statBad').textContent;
+    toast('检查提交成功（异常 ' + bad + ' 项）');
+    setTimeout(function () { location.href = 'home.html'; }, 1400);
+  }
+
+  /* ---------------- toast ---------------- */
+  var toastTimer;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+
+  buildCir();
+  buildGroups();
+</script>
+</body>
+</html>

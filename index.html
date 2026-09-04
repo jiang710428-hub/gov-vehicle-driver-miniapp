@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 登录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-deep: #001645;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --bg: #F9F9F9;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 12px;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px;
+    max-width: 100%;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+  }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  /* 登录页 */
+  .login-deco {
+    position: absolute; top: 0; left: 0; right: 0; height: 300px;
+    background: linear-gradient(180deg, #E1ECFC 0%, #EEF4FB 62%, rgba(238,244,251,0) 100%);
+    z-index: 0; pointer-events: none;
+  }
+  .login-deco::before {
+    content: ''; position: absolute; top: -130px; left: 50%; transform: translateX(-50%);
+    width: 440px; height: 440px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(1,77,178,.18) 0%, rgba(1,77,178,0) 68%);
+  }
+  .login-deco::after {
+    content: ''; position: absolute; top: 190px; left: -70px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(16,185,129,.12) 0%, rgba(16,185,129,0) 70%);
+  }
+  .login-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    padding: 44px 30px 24px;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .login-content::-webkit-scrollbar { display: none; }
+  .brand { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .logo {
+    width: 84px; height: 84px; border-radius: 24px;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 16px 32px rgba(1, 77, 178, 0.34), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .app-name { font-size: 21px; font-weight: 700; letter-spacing: 1.5px; }
+  .slogan { font-size: 12px; color: var(--muted); letter-spacing: 2.5px; }
+
+  .login-spacer { height: 44px; flex: none; }
+
+  .form { display: flex; flex-direction: column; gap: 18px; }
+  .form-field { display: flex; flex-direction: column; gap: 8px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--sub); padding-left: 4px; }
+  .field {
+    height: 54px; border-radius: 12px; background: #F5F7FA;
+    display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    border: 1.5px solid transparent; transition: all .2s;
+  }
+  .field:focus-within {
+    background: #fff; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(1,77,178,.12), 0 6px 18px rgba(1,77,178,.08);
+  }
+  .field:focus-within svg * { stroke: var(--primary); }
+  .field:focus-within svg rect[fill="#8A94A6"],
+  .field:focus-within svg circle[fill="#8A94A6"] { fill: var(--primary); }
+  .field input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 15px; color: var(--text); font-family: inherit;
+  }
+  .field input::placeholder { color: var(--faint); }
+  .field .icon-btn { cursor: pointer; display: flex; }
+
+  .login-btn {
+    height: 52px; border-radius: 26px; border: none; cursor: pointer; margin-top: 10px;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 17px; font-weight: 600;
+    font-family: inherit; letter-spacing: 8px; text-indent: 8px;
+    box-shadow: 0 12px 26px rgba(1, 77, 178, 0.34);
+    transition: transform .15s, box-shadow .15s, opacity .2s;
+  }
+  .login-btn:active { transform: scale(0.97); box-shadow: 0 5px 14px rgba(1,77,178,.28); }
+  .login-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .agree-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 16px; font-size: 12px; color: var(--muted);
+  }
+  .agree-row a { color: var(--primary); text-decoration: none; }
+  .checkbox {
+    width: 16px; height: 16px; border-radius: 4px; cursor: pointer;
+    background: var(--primary); display: flex; align-items: center; justify-content: center;
+    transition: background .15s, opacity .15s;
+  }
+  .checkbox.off { background: #DDE2EA; }
+  .checkbox.off svg { opacity: 0; }
+
+  /* toast */
+  .toast {
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(10, 22, 40, 0.88); color: #fff; font-size: 13px;
+    padding: 9px 18px; border-radius: 100px; opacity: 0; pointer-events: none;
+    transition: all .3s; white-space: nowrap; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <div class="page" id="page-login">
+    <div class="login-deco"></div>
+    <div class="statusbar">
+      <span class="time">9:41</span>
+      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+
+    <div class="login-content">
+      <div class="brand">
+        <div class="logo">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.5 27L11.2 20.9C11.9 19.3 13.4 18.3 15.1 18.3H28.9C30.6 18.3 32.1 19.3 32.8 20.9L35.5 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14.5 13.7C15.1 12.2 16.5 11.2 18.1 11.2H25.9C27.5 11.2 28.9 12.2 29.5 13.7L31.2 18H12.8L14.5 13.7Z" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
+            <rect x="10.5" y="27" width="23" height="4" rx="2" fill="#FFFFFF"/>
+            <circle cx="15.5" cy="28.5" r="2.4" fill="#014DB2"/>
+            <circle cx="28.5" cy="28.5" r="2.4" fill="#014DB2"/>
+          </svg>
+        </div>
+        <div class="app-name">智慧新城公务用车驾驶员端</div>
+        <div class="slogan">安全驾驶 · 高效出行</div>
+      </div>
+
+      <div class="login-spacer"></div>
+
+      <form class="form" id="login-form" onsubmit="return handleLogin(event)">
+        <div class="form-field">
+          <label class="form-label" for="phone">手机号</label>
+          <div class="field">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.5" stroke="#8A94A6" stroke-width="1.6"/><rect x="10.2" y="18" width="3.6" height="1.4" rx="0.7" fill="#8A94A6"/></svg>
+            <input type="tel" id="phone" maxlength="11" placeholder="请输入手机号" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="pwd">密码</label>
+          <div class="field">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5" stroke="#8A94A6" stroke-width="1.6"/><rect x="10.6" y="5.4" width="2.8" height="5.6" rx="1.4" stroke="#8A94A6" stroke-width="1.6"/><circle cx="12" cy="15.2" r="1.5" fill="#8A94A6"/></svg>
+            <input type="password" id="pwd" placeholder="请输入密码" autocomplete="off">
+            <span class="icon-btn" onclick="togglePwd()">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="#8A94A6" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#8A94A6" stroke-width="1.6"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="login-btn">登 录</button>
+      </form>
+
+      <div class="agree-row">
+        <span class="checkbox off" id="agree-box" onclick="toggleAgree()">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4.5l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>已阅读并同意</span><a href="agreement.html">《用户协议》</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  function togglePwd() {
+    var pwd = document.getElementById('pwd');
+    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+  }
+
+  var agreed = false;
+
+  function toggleAgree() {
+    var box = document.getElementById('agree-box');
+    agreed = !agreed;
+    box.classList.toggle('off', !agreed);
+  }
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    var btn = document.getElementById('login-btn');
+    var phone = document.getElementById('phone').value.trim();
+    var pwd = document.getElementById('pwd').value.trim();
+
+    if (!phone || !pwd) { toast('请输入手机号和密码'); return false; }
+    if (!/^1\d{10}$/.test(phone)) { toast('手机号格式不正确'); return false; }
+    if (!agreed) { toast('请先勾选同意《用户协议》'); return false; }
+
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    setTimeout(function () {
+      location.href = 'home.html';
+    }, 600);
+    return false;
+  }
+
+  document.getElementById('pwd').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('login-form').dispatchEvent(new Event('submit', {cancelable: true}));
+  });
+</script>
+
+</body>
+</html>

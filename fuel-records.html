@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 加油记录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fl-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fl-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fl-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fl-nav .back-btn:active { transform: scale(0.9); }
+  .fl-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fl-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 13px 16px 96px;
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .fl-body::-webkit-scrollbar { display: none; }
+  #flList { display: flex; flex-direction: column; gap: 11px; }
+
+  /* 搜索栏 */
+  .search-bar {
+    position: sticky; top: 0; z-index: 40;
+    margin: -13px -16px 0; padding: 10px 16px 11px;
+    background: var(--bg);
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 12px; height: 40px;
+    padding: 0 13px; border: 1px solid #EDF0F6;
+    box-shadow: 0 2px 8px rgba(15, 77, 178, 0.05);
+  }
+  .search-box input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-size: 13px; color: var(--text); font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--muted); }
+  .search-clr {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #E5E9F2; color: #64748B; border: none; cursor: pointer;
+    display: none; align-items: center; justify-content: center; padding: 0;
+  }
+  .search-clr.show { display: inline-flex; }
+  .search-hint { margin-top: 6px; font-size: 10.5px; color: var(--muted); letter-spacing: .2px; padding-left: 2px; }
+  .search-hint b { font-weight: 600; color: var(--sub); }
+
+  /* 记录编号条（卡片顶部） */
+  .fc-code {
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+    padding-bottom: 9px; margin-bottom: 10px;
+    border-bottom: 1px dashed #EEF0F5;
+  }
+  .fc-code .c-ic {
+    width: 15px; height: 15px; border-radius: 5px; flex-shrink: 0;
+    background: #EFF6FF; color: #014DB2;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fc-code .c-lab { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+  .fc-code .c-val {
+    font-size: 11.5px; font-weight: 800; color: var(--text); min-width: 0;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fc-code .c-plate {
+    margin-left: auto; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10.5px; font-weight: 700; color: var(--primary);
+    background: #EFF6FF; border-radius: 100px; padding: 2.5px 9px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .fc-code .c-plate:active { background: #E3EDFD; }
+
+  /* 加油记录卡片 */
+  .fl-card {
+    background: #fff; border-radius: 16px; padding: 12px 14px 9px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+    cursor: pointer;
+  }
+  .fl-card:active { background: #FAFBFD; }
+
+  .fc-head { display: flex; align-items: center; gap: 7px; }
+  .fc-date { font-size: 15px; font-weight: 800; font-family: Inter, "Sarasa Gothic SC", sans-serif; font-variant-numeric: tabular-nums; }
+  .fc-week { font-size: 11px; color: var(--muted); }
+  .fc-today {
+    font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .5px;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    border-radius: 100px; padding: 2px 8px;
+  }
+  .fc-head .fc-right { margin-left: auto; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+  .fc-tag {
+    font-size: 10.5px; font-weight: 600; border-radius: 100px; padding: 3px 9px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .fc-tag.mine { color: var(--green-dark); background: var(--green-bg); }
+  .fc-tag.other { color: var(--muted); background: #F1F3F8; }
+  .fc-ops { display: flex; gap: 6px; }
+  .fc-ops button {
+    border: none; background: none; cursor: pointer;
+    font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 100px;
+    display: inline-flex; align-items: center; gap: 3px; font-family: inherit;
+  }
+  .fc-ops .op-edit { color: var(--primary); background: #EFF6FF; }
+  .fc-ops .op-del { color: var(--red); background: var(--red-bg); }
+
+  .fc-main { display: flex; gap: 11px; margin-top: 10px; }
+  .fc-thumb {
+    width: 86px; height: 64px; border-radius: 10px; flex-shrink: 0;
+    background: #F0F2F7; border: 1px solid #E4E9F1; overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fc-thumb .fc-num {
+    position: absolute; right: 4px; bottom: 4px;
+    background: rgba(10, 22, 40, .72); color: #fff;
+    font-size: 9.5px; font-weight: 700; border-radius: 100px; padding: 1px 7px;
+    font-family: Inter, sans-serif;
+  }
+  .fc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .fc-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .fc-row .ic { width: 14px; text-align: center; flex-shrink: 0; color: #A5AEBE; display: flex; }
+  .fc-row .k { font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
+  .fc-row .v {
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .fc-row .v.loc { font-weight: 600; }
+  .fc-row .v.amt { color: var(--primary); font-size: 14px; font-weight: 800; }
+  .fc-row .v.bal { color: var(--green-dark); }
+
+  .fc-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 10px; padding-top: 8px; border-top: 1px dashed #EEF0F5;
+  }
+  .fc-who { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fc-who b { color: var(--text); font-weight: 700; }
+  .fc-who .no { font-family: Inter, sans-serif; }
+
+  /* 空状态 */
+  .empty {
+    padding: 44px 20px; text-align: center; color: var(--muted);
+  }
+  .empty .e-ic {
+    width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 20px;
+    background: linear-gradient(135deg, #EAF1FC, #DCE9FB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .e-t { font-size: 14px; font-weight: 700; color: var(--text); }
+  .empty .e-s { font-size: 11.5px; margin-top: 6px; line-height: 1.7; }
+  .empty-btn {
+    display: inline-flex; margin-top: 14px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 12.5px; font-weight: 600; font-family: inherit;
+    padding: 8px 20px; border-radius: 100px;
+    box-shadow: 0 6px 16px rgba(1, 77, 178, 0.24);
+  }
+
+  /* 底部新增按钮 */
+  .fab {
+    position: absolute; right: 18px; bottom: 22px; z-index: 120;
+    width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; box-shadow: 0 10px 24px rgba(1, 77, 178, 0.42);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .18s;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ===== 弹层 ===== */
+  .mask {
+    position: absolute; inset: 0; background: rgba(7, 15, 30, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity .28s; z-index: 300;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 310;
+    background: #fff; border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform .32s cubic-bezier(.32, .72, .28, 1);
+    box-shadow: 0 -12px 40px rgba(7, 15, 30, 0.18);
+    padding-bottom: 18px;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sh-handle { height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .sh-handle::before { content: ''; width: 38px; height: 4px; border-radius: 2px; background: #E2E7EE; }
+  .sh-body { padding: 0 18px; }
+
+  /* 删除确认 */
+  .cf-ic {
+    width: 56px; height: 56px; margin: 6px auto 12px; border-radius: 50%;
+    background: var(--red-bg); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cf-t { font-size: 16px; font-weight: 800; text-align: center; }
+  .cf-s { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; line-height: 1.7; }
+  .cf-ops { display: flex; gap: 10px; margin-top: 14px; }
+  .cf-ops button {
+    flex: 1; height: 46px; border-radius: 13px; cursor: pointer;
+    font-size: 15px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+    transition: transform .15s;
+  }
+  .cf-ops button:active { transform: scale(0.97); }
+  .cf-ops .cf-no { border: 1px solid #DCE2EC; background: #fff; color: var(--sub); }
+  .cf-ops .cf-yes { border: none; background: linear-gradient(135deg, #F87171, #DC2626); color: #fff; box-shadow: 0 8px 18px rgba(220, 38, 38, .30); }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 400;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">15:50</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="fl-content">
+        <div class="fl-nav">
+          <button class="back-btn" onclick="goBack()" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">加油记录</span>
+        </div>
+
+        <div class="fl-body">
+          <!-- 搜索：车牌号 / 记录编号 / 记录人 -->
+          <div class="search-bar">
+            <div class="search-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#94A3B8" stroke-width="2"/><path d="M15.5 15.5L20 20" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>
+              <input id="kwInput" type="text" placeholder="搜索车牌号 / 记录编号 / 记录人" oninput="onSearch(this.value)">
+              <button type="button" class="search-clr" id="kwClr" onclick="clearKw()" aria-label="清除搜索">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="search-hint">支持按 <b>车牌号</b> / <b>记录编号</b> / <b>记录人</b> 搜索</div>
+          </div>
+
+          <div id="flList"></div>
+        </div>
+      </div>
+
+      <!-- 新增 FAB -->
+      <button class="fab" onclick="addRec()" aria-label="新增加油记录">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 删除确认弹层 -->
+    <div class="mask" id="mask" onclick="closeDel()"></div>
+    <div class="sheet" id="delSheet">
+      <div class="sh-handle"></div>
+      <div class="sh-body">
+        <div class="cf-ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="cf-t">删除这条加油记录？</div>
+        <div class="cf-s" id="delInfo"></div>
+        <div class="cf-ops">
+          <button class="cf-no" onclick="closeDel()">取消</button>
+          <button class="cf-yes" onclick="doDelete()">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_fuel_list';
+  /* 当前登录驾驶员（演示固定：张三） */
+  var ME = { name: '张三', no: '10086' };
+  var PLATE = qs('plate');
+  var LIST = load();
+  var MAX_PHOTOS = 9;
+  var kw = '';          /* 搜索关键词（空 = 上下文视图） */
+
+  /* ========== 工具 ========== */
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(LIST)); }
+
+  /* ===== 记录编号 / 创建时间元数据 =====
+     编号规则：JY + 记录创建日(YYYYMMDD) + 当日流水(2 位自 01)，
+     创建时由系统自动生成并固定，用于搜索与追溯 */
+  function norm(s) {
+    return String(s == null ? '' : s).toLowerCase().replace(/[\s·．]/g, '');
+  }
+  function plateCount(arr) {
+    var seen = {}, n = 0;
+    arr.forEach(function (x) { if (!seen[x.plate]) { seen[x.plate] = 1; n++; } });
+    return n;
+  }
+  function uniqPlate(arr) {
+    var p = '';
+    for (var i = 0; i < arr.length; i++) {
+      if (!p) p = arr[i].plate;
+      else if (p !== arr[i].plate) return '';
+    }
+    return p;
+  }
+  function ensureMeta(list) {
+    /* 为旧数据补全 createdAt（到秒）与 code，演示数据一并规范 */
+    var changed = false;
+    var max = {};
+    list.forEach(function (x) {
+      if (!x.createdAt) {
+        var i = list.indexOf(x);
+        var d = x.date || today();
+        var hh = p2(8 + (i * 3) % 10), mi = p2((i * 13) % 60), ss = p2((i * 29) % 60);
+        x.createdAt = d + ' ' + hh + ':' + mi + ':' + ss;
+        changed = true;
+      }
+    });
+    list.forEach(function (x) {
+      var m = /^JY(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m) max[m[1]] = Math.max(max[m[1]] || 0, +m[2]);
+    });
+    list.forEach(function (x) {
+      if (x.code) return;
+      var day = (x.createdAt || today()).slice(0, 10).replace(/-/g, '');
+      var n = (max[day] || 0) + 1; max[day] = n;
+      x.code = 'JY' + day + '-' + p2(n);
+      changed = true;
+    });
+    return changed;
+  }
+  function genNewCode(list) {
+    var d = new Date();
+    var day = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var max = 0;
+    list.forEach(function (x) {
+      var m = /^JY(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m && m[1] === day) max = Math.max(max, +m[2]);
+    });
+    return 'JY' + day + '-' + p2(max + 1);
+  }
+
+  /* 当前可视记录（搜索时全局匹配 车牌号/记录编号/记录人；否则按进入车辆过滤） */
+  function visibleList() {
+    var q = kw.trim();
+    var arr;
+    if (q) {
+      var nq = norm(q);
+      arr = LIST.filter(function (x) {
+        return norm(x.code).indexOf(nq) >= 0
+          || norm(x.plate).indexOf(nq) >= 0
+          || norm(x.driverName).indexOf(nq) >= 0
+          || norm(x.driverNo).indexOf(nq) >= 0;
+      });
+    } else if (PLATE) {
+      arr = LIST.filter(function (x) { return x.plate === PLATE; });
+    } else {
+      arr = LIST.slice();
+    }
+    return arr.slice().sort(function (a, b) {
+      return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+    });
+  }
+
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function parseDate(s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function weekText(d) { return '周' + '日一二三四五六'[d.getDay()]; }
+  function today() { return dstr(new Date()); }
+  function isMine(r) { return r.driverName === ME.name && r.driverNo === ME.no; }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function yuan(v) {
+    if (v === '' || v == null) return '--';
+    return '¥' + Number(v).toFixed(2);
+  }
+
+  function goBack() {
+    /* 加油记录列表由车辆信息页「加油记录」入口进入（带 plate）；
+       直接返回车辆信息页，不依赖浏览器历史栈（直开/预览场景 history 不可靠） */
+    if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
+    if (window.history && history.length > 1) { history.back(); return; }
+    location.href = 'vehicles.html';
+  }
+
+  /* ========== 演示数据 ========== */
+  function demoImg(k) {
+    var colors = [
+      { bg: '#EAF1FC', c1: '#014DB2', c2: '#B9D2F0' },
+      { bg: '#ECFDF5', c1: '#047857', c2: '#A7F3D0' },
+      { bg: '#FFFBEB', c1: '#D97706', c2: '#FDE68A' }
+    ];
+    var c = colors[k % colors.length];
+    var s = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'>" +
+      "<rect width='320' height='240' rx='16' fill='" + c.bg + "'/>" +
+      "<rect x='20' y='20' width='280' height='200' rx='12' fill='#fff' opacity='.9'/>" +
+      "<rect x='40' y='40' width='120' height='14' rx='7' fill='" + c.c1 + "' opacity='.9'/>" +
+      "<rect x='40' y='66' width='240' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='84' width='200' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='120' width='150' height='10' rx='5' fill='" + c.c1 + "' opacity='.85'/>" +
+      "<rect x='40' y='150' width='200' height='10' rx='5' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='172' width='120' height='24' rx='12' fill='" + c.c1 + "' opacity='.95'/>" +
+      "</svg>";
+    return 'data:image/svg+xml,' + encodeURIComponent(s);
+  }
+
+  /* 指定车辆无记录时补 3 条演示记录 */
+  function seedFor(plate) {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    function off(o) { var t = new Date(y, m - 1, day + o); return dstr(t); }
+    var S = [
+      { id: 'F' + Date.now() + '1', plate: plate, date: off(-1),
+        loc: '中石化南京新城加油站', amount: '320.00', balance: '1680.50',
+        photos: [demoImg(0), demoImg(1)],
+        driverName: '张三', driverNo: '10086' },
+      { id: 'F' + Date.now() + '2', plate: plate, date: off(-6),
+        loc: '中石油南京滨江加油站', amount: '400.00', balance: '1280.50',
+        photos: [demoImg(1)],
+        driverName: '李建国', driverNo: '10012' },
+      { id: 'F' + Date.now() + '3', plate: plate, date: off(-15),
+        loc: '壳牌南京奥体加油站', amount: '260.50', balance: '1020.00',
+        photos: [demoImg(2), demoImg(0)],
+        driverName: '王强', driverNo: '10038' }
+    ];
+    LIST = LIST.concat(S);
+  }
+
+  /* 全库为空时跨 3 辆车预置演示记录（支持全局总览与车牌搜索） */
+  function seedAll() {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    function off(o) { var t = new Date(y, m - 1, day + o); return dstr(t); }
+    var S = [
+      { id: 'F' + Date.now() + '11', plate: '苏A·12345', date: off(-1),
+        loc: '中石化南京新城加油站', amount: '320.00', balance: '1680.50',
+        photos: [demoImg(0), demoImg(1)],
+        driverName: '张三', driverNo: '10086' },
+      { id: 'F' + Date.now() + '12', plate: '苏A·12345', date: off(-6),
+        loc: '中石油南京滨江加油站', amount: '400.00', balance: '1280.50',
+        photos: [demoImg(1)],
+        driverName: '李建国', driverNo: '10012' },
+      { id: 'F' + Date.now() + '13', plate: '苏A·12345', date: off(-15),
+        loc: '壳牌南京奥体加油站', amount: '260.50', balance: '1020.00',
+        photos: [demoImg(2), demoImg(0)],
+        driverName: '王强', driverNo: '10038' },
+      { id: 'F' + Date.now() + '21', plate: '苏A·67890', date: off(-2),
+        loc: '中石化南京建邺加油站', amount: '350.00', balance: '980.00',
+        photos: [demoImg(2)],
+        driverName: '张三', driverNo: '10086' },
+      { id: 'F' + Date.now() + '22', plate: '苏A·67890', date: off(-9),
+        loc: '中石油南京河西加油站', amount: '280.50', balance: '1250.00',
+        photos: [demoImg(0), demoImg(2)],
+        driverName: '王强', driverNo: '10038' },
+      { id: 'F' + Date.now() + '31', plate: '苏B·34567', date: off(-4),
+        loc: '中石化南京江宁加油站', amount: '300.00', balance: '1660.00',
+        photos: [demoImg(1)],
+        driverName: '李建国', driverNo: '10012' }
+    ];
+    LIST = LIST.concat(S);
+  }
+
+  /* ========== 渲染 ========== */
+  function dateLabel(ds) {
+    var d = parseDate(ds), t = today();
+    var h = '<span class="fc-date">' + ds + '</span><span class="fc-week">' + weekText(d) + '</span>';
+    if (ds === t) h += '<span class="fc-today">今天</span>';
+    return h;
+  }
+
+  function cardHtml(r, showPlate) {
+    var mine = isMine(r);
+    var thumb = r.photos && r.photos.length
+      ? '<img src="' + r.photos[0] + '" alt="加油照片">' +
+        (r.photos.length > 1 ? '<span class="fc-num">共 ' + r.photos.length + ' 张</span>' : '')
+      : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="6" width="17" height="13" rx="2.5" stroke="#C6CFDC" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3" stroke="#C6CFDC" stroke-width="1.6"/></svg>';
+
+    var right = mine
+      ? '<span class="fc-tag mine">我的记录</span><span class="fc-ops">' +
+        '<button class="op-edit" onclick="event.stopPropagation();edit(\'' + r.id + '\')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M14.5 5.5l4 4M5 19l4.2-1 10-10a1.4 1.4 0 0 0-2-2l-10 10L5 19z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>编辑</button>' +
+        '<button class="op-del" onclick="event.stopPropagation();askDel(\'' + r.id + '\')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>删除</button>' +
+        '</span>'
+      : '<span class="fc-tag other">他人记录</span>';
+
+    return '' +
+      '<div class="fl-card" data-mine="' + (mine ? '1' : '0') + '" onclick="onCard(\'' + r.id + '\')">' +
+        '<div class="fc-code">' +
+          '<span class="c-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h12A1.5 1.5 0 0 1 19.5 5v16l-3-1.6-3 1.6-3-1.6-3 1.6V5A1.5 1.5 0 0 1 6 3.5z" stroke="#014DB2" stroke-width="2" stroke-linejoin="round"/><path d="M8.8 8.5h6.4M8.8 12h6.4" stroke="#014DB2" stroke-width="2" stroke-linecap="round"/></svg></span>' +
+          '<span class="c-lab">记录编号</span>' +
+          '<span class="c-val">' + esc(r.code || '--') + '</span>' +
+          (showPlate ? '<span class="c-plate" onclick="event.stopPropagation();jumpPlate(\'' + esc(r.plate) + '\')">' + esc(r.plate) + '</span>' : '') +
+        '</div>' +
+        '<div class="fc-head">' + dateLabel(r.date) +
+          '<span class="fc-right">' + right + '</span>' +
+        '</div>' +
+        '<div class="fc-main">' +
+          '<span class="fc-thumb">' + thumb + '</span>' +
+          '<span class="fc-info">' +
+            '<span class="fc-row"><span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 21c3.6-3.3 5.6-6.3 5.6-9.2A5.6 5.6 0 0 0 6.4 11.8c0 2.9 2 5.9 5.6 9.2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="11.5" r="2.2" stroke="currentColor" stroke-width="1.7"/></svg></span>' +
+              '<span class="k">地点</span><span class="v loc">' + esc(r.loc) + '</span></span>' +
+            '<span class="fc-row"><span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14M3.5 20h11M9 9.5h2M9 13h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 12h1.6a1.4 1.4 0 0 1 1.4 1.4V17a1.5 1.5 0 0 0 3 0v-5.2l-2.2-2.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+              '<span class="k">加油金额</span><span class="v amt">' + yuan(r.amount) + '</span></span>' +
+            '<span class="fc-row"><span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5.5" width="17" height="13.5" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M7 10.5h3.5L9 13h3M16 9v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+              '<span class="k">油卡余额</span><span class="v bal">' + yuan(r.balance) + '</span></span>' +
+          '</span>' +
+        '</div>' +
+        '<div class="fc-foot">' +
+          '<span class="fc-who">记录人 <b>' + esc(r.driverName) + '</b> · 编号 <span class="no">' + esc(r.driverNo) + '</span></span>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function render() {
+    var box = document.getElementById('flList');
+    var arr = visibleList();
+    var searching = kw.trim() !== '';
+    var multiCars = plateCount(arr) > 1;   /* 结果跨多车：卡片需展示车牌 chip 以区分/跳转 */
+
+    /* 空态 */
+    if (!arr.length) {
+      box.innerHTML =
+        '<div class="empty"><div class="e-ic">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#014DB2" stroke-width="1.8"/><path d="M15.5 15.5L20 20" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '</div><div class="e-t">' + (searching ? '未找到相关记录' : '暂无加油记录') + '</div>' +
+        '<div class="e-s">' + (searching
+          ? '试试输入完整的车牌号、记录编号或记录人'
+          : (PLATE
+            ? '点击下方 <b>＋</b> 新增本条车辆的加油记录'
+            : '暂无演示数据，将从车辆详情进入时自动生成')) + '</div>' +
+        (searching ? '<button class="empty-btn" onclick="clearKw()">清除搜索</button>' : '') +
+        '</div>';
+      return;
+    }
+
+    /* 列表 */
+    var h = '';
+    arr.forEach(function (r) { h += cardHtml(r, multiCars); });
+    box.innerHTML = h;
+  }
+
+  /* ========== 搜索 ========== */
+  function onSearch(v) {
+    kw = v;
+    var clr = document.getElementById('kwClr');
+    if (clr) clr.className = 'search-clr' + (kw.trim() ? ' show' : '');
+    render();
+  }
+  function clearKw() {
+    kw = '';
+    var inp = document.getElementById('kwInput'); if (inp) inp.value = '';
+    var clr = document.getElementById('kwClr'); if (clr) clr.className = 'search-clr';
+    render();
+  }
+  /* 卡片车牌 chip：跨车结果中点击直接进入对应车辆列表 */
+  function jumpPlate(p) { location.href = 'fuel-records.html?plate=' + encodeURIComponent(p); }
+
+  /* ========== 操作 ========== */
+  function addRec() {
+    var arr = visibleList();
+    var p = uniqPlate(arr);
+    if (p) { location.href = 'fuel-edit.html?plate=' + encodeURIComponent(p); return; }
+    if (PLATE && !kw.trim()) { location.href = 'fuel-edit.html?plate=' + encodeURIComponent(PLATE); return; }
+    toast(kw.trim()
+      ? '当前为多车搜索结果，请先点击车牌进入具体车辆后新增'
+      : '请先进入具体车辆（点击车牌或从车辆详情进入）后新增');
+  }
+  function findRec(id) {
+    for (var i = 0; i < LIST.length; i++) { if (LIST[i].id === id) return LIST[i]; }
+    return null;
+  }
+  function onCard(id) {
+    var r = findRec(id);
+    if (!r) return;
+    /* 本人记录点卡片直接进入编辑页；他人记录可点入只读详情完整查看 */
+    location.href = isMine(r)
+      ? 'fuel-edit.html?id=' + id
+      : 'fuel-view.html?id=' + encodeURIComponent(id);
+  }
+  function edit(id) { location.href = 'fuel-edit.html?id=' + id; }
+
+  var delId = null;
+  function askDel(id) {
+    var r = findRec(id);
+    if (!r) { return; }
+    if (!isMine(r)) { toast('仅可删除自己创建的记录'); return; }
+    delId = id;
+    document.getElementById('delInfo').textContent =
+      r.date + ' · ' + r.loc + ' · 加油 ' + Number(r.amount).toFixed(2) + ' 元';
+    showSheet('delSheet');
+  }
+  function doDelete() {
+    if (!delId) return;
+    LIST = LIST.filter(function (x) { return x.id !== delId; });
+    save();
+    closeDel();
+    toast('加油记录已删除');
+    render();
+  }
+  function closeDel() {
+    delId = null;
+    hideSheet('delSheet');
+  }
+
+  /* ========== 弹层 / toast ========== */
+  function showSheet(id) { document.getElementById(id).classList.add('show'); document.getElementById('mask').classList.add('show'); }
+  function hideSheet(id) { document.getElementById(id).classList.remove('show'); document.getElementById('mask').classList.remove('show'); }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+
+  /* ========== 初始化 ========== */
+  (function init() {
+    var changed = ensureMeta(LIST);
+    if (changed) save();
+    if (!LIST.length) {
+      /* 全库为空：跨车预置演示记录（支持全局总览与车牌搜索） */
+      seedAll();
+      ensureMeta(LIST);
+      save();
+    } else if (PLATE && !LIST.some(function (x) { return x.plate === PLATE; })) {
+      /* 有目标车辆但无其记录：仅补该车演示数据 */
+      seedFor(PLATE);
+      ensureMeta(LIST);
+      save();
+    }
+    render();
+  })();
+</script>
+</body>
+</html>

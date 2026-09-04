@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 出勤详情</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --indigo: #4F46E5;
+    --indigo-bg: #EEF0FF;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .vv-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .vv-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .vv-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .vv-nav .back-btn:active { transform: scale(0.9); }
+  .vv-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .vv-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 14px 16px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .vv-body::-webkit-scrollbar { display: none; }
+
+  /* 顶部打卡信息卡 */
+  .v-hero {
+    background: linear-gradient(135deg, #F4F8FE 0%, #E7F0FC 100%);
+    border: 1px solid #D5E4F8; border-radius: 18px;
+    padding: 17px 16px 16px;
+    display: flex; align-items: center; gap: 13px;
+  }
+  .v-hero .h-ic {
+    width: 52px; height: 52px; border-radius: 17px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .v-hero .h-ic.am { background: linear-gradient(135deg, #DCE9FC, #BFD8F6); }
+  .v-hero .h-ic.pm { background: linear-gradient(135deg, #E4E8FC, #CFD7FA); }
+  .v-hero .h-mid { flex: 1; min-width: 0; }
+  .v-hero .h-slot { font-size: 17px; font-weight: 800; letter-spacing: .5px; }
+  .v-hero .h-date { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .v-hero .h-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .v-hero .h-time {
+    font-size: 25px; font-weight: 800; letter-spacing: .5px;
+    font-variant-numeric: tabular-nums; color: var(--text);
+  }
+  .v-tag {
+    font-size: 10.5px; font-weight: 700; border-radius: 100px;
+    padding: 3px 10px; border: 1px solid transparent;
+  }
+  .v-tag.normal { color: var(--green-dark); background: var(--green-bg); border-color: #A7F3D0; }
+  .v-tag.leave { color: var(--amber); background: var(--amber-bg); border-color: #FDE68A; }
+  .v-tag.off { color: var(--indigo); background: var(--indigo-bg); border-color: #D8DCFA; }
+
+  /* 通用卡片 */
+  .v-card {
+    background: #fff; border-radius: 16px; padding: 14px 15px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+  }
+  .v-card .c-head {
+    display: flex; align-items: center; gap: 7px; margin-bottom: 11px;
+  }
+  .v-card .c-head .no {
+    width: 20px; height: 20px; border-radius: 7px; flex-shrink: 0;
+    background: #E7F0FE; color: var(--primary);
+    font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  .v-card .c-head .t { font-size: 14px; font-weight: 800; letter-spacing: .3px; }
+  .v-card .c-head .sub { margin-left: auto; font-size: 10px; color: var(--faint); }
+
+  .kv { display: flex; gap: 10px; }
+  .kv .k-lab { font-size: 12px; color: var(--muted); flex-shrink: 0; width: 62px; line-height: 1.7; }
+  .kv .k-val { font-size: 13px; color: var(--text); line-height: 1.7; word-break: break-all; min-width: 0; flex: 1; }
+
+  /* 自拍大图 */
+  .selfie-img {
+    width: 100%; border-radius: 14px; display: block; object-fit: cover;
+    max-height: 240px; background: #F0F2F7;
+  }
+  .empty-ph {
+    border: 1.5px dashed #D8DFEA; background: #F7F9FC; border-radius: 14px;
+    padding: 22px 0; text-align: center; font-size: 12px; color: var(--faint);
+  }
+
+  /* 定位 */
+  .loc-line { display: flex; align-items: flex-start; gap: 10px; }
+  .loc-ic {
+    width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+    background: var(--blue-bg); display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .loc-tx { flex: 1; min-width: 0; }
+  .loc-tx .addr { font-size: 13px; font-weight: 600; line-height: 1.5; word-break: break-all; }
+  .loc-tx .time { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  /* 照片网格（纯展示） */
+  .v-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .v-grid img {
+    width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 11px; display: block;
+    background: #F0F2F7;
+  }
+
+  .v-note { text-align: center; font-size: 10.5px; color: var(--faint); line-height: 1.7; padding-top: 2px; }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 400;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">09:52</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="vv-content">
+        <div class="vv-nav">
+          <button class="back-btn" onclick="location.href='attendance.html'" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">出勤详情</span>
+        </div>
+
+        <div class="vv-body" id="viewBody">
+          <!-- 内容由 JS 渲染 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_attendance_list';
+  var TYPE_TXT = { normal: '正常出勤', leave: '请假', off: '调休' };
+  var SLOT_TXT = { am: '上班打卡', pm: '下班打卡' };
+  var LOC_ADDR = '江苏省南京市建邺区新城大道智慧新城中心大厦';
+
+  /* ========== 工具 ========== */
+  function byId(id) { return document.getElementById(id); }
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function parseDate(s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); }
+  function weekText(d) { return '周' + '日一二三四五六'[d.getDay()]; }
+  function today() { var d = new Date(); return dstr(d); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+
+  function qs() {
+    var o = {};
+    var q = location.search;
+    if (!q) return o;
+    q.replace(/[?&]([^=]+)=([^&]*)/g, function (_, k, v) {
+      o[decodeURIComponent(k)] = decodeURIComponent(v);
+    });
+    return o;
+  }
+
+  /* ========== 图标 ========== */
+  var SVG_UP = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 19V5.5M6 11.5L12 5.5l6 6" stroke="#014DB2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var SVG_DOWN = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v13.5M6 12.5l6 6 6-6" stroke="#4F46E5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ========== toast ========== */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = byId('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+  function backSoon() {
+    setTimeout(function () { location.href = 'attendance.html'; }, 900);
+  }
+
+  /* ========== 渲染 ========== */
+  function card(headNo, headT, headSub, inner) {
+    return '<div class="v-card">' +
+      '<div class="c-head"><span class="no">' + headNo + '</span><span class="t">' + headT + '</span>' +
+      (headSub ? '<span class="sub">' + headSub + '</span>' : '') + '</div>' + inner + '</div>';
+  }
+
+  function render(r) {
+    var isAm = r.slot === 'am';
+    var d = parseDate(r.date);
+    var dateLabel = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekText(d);
+    var isT = r.date === today();
+    var typeTxt = TYPE_TXT[r.type] || '正常出勤';
+    var typeCls = TYPE_TXT[r.type] ? r.type : 'normal';
+
+    var h = '';
+
+    /* ① 打卡信息 */
+    h += '<div class="v-hero">' +
+      '<span class="h-ic ' + (isAm ? 'am' : 'pm') + '">' + (isAm ? SVG_UP : SVG_DOWN) + '</span>' +
+      '<div class="h-mid">' +
+      '<div class="h-slot">' + SLOT_TXT[r.slot] + '</div>' +
+      '<div class="h-date">' + dateLabel + (isT ? ' · 今天' : '') + '</div>' +
+      '</div>' +
+      '<div class="h-right">' +
+      '<div class="h-time">' + esc(r.time || '--:--') + '</div>' +
+      '<span class="v-tag ' + typeCls + '">' + typeTxt + '</span>' +
+      '</div></div>';
+
+    /* ② 自拍照 */
+    var sfInner;
+    if (r.selfie) {
+      sfInner = '<img class="selfie-img" src="' + r.selfie + '" alt="自拍照">';
+    } else {
+      sfInner = '<div class="empty-ph">未上传自拍照</div>';
+    }
+    h += card(2, '自拍照', '打卡时拍摄', sfInner);
+
+    /* ③ 定位 */
+    if (r.loc) {
+      var locInner =
+        '<div class="loc-line">' +
+        '<span class="loc-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 21s-6.5-5.2-6.5-10a6.5 6.5 0 1 1 13 0c0 4.8-6.5 10-6.5 10z" stroke="#014DB2" stroke-width="1.8"/><circle cx="12" cy="10.5" r="2.6" stroke="#014DB2" stroke-width="1.8"/></svg></span>' +
+        '<span class="loc-tx"><div class="addr">' + esc(r.loc) + '</div>' +
+        '<div class="time">定位时间：' + esc(r.locTime || '--') + '</div></span></div>';
+    } else {
+      var locInner = '<div class="empty-ph">未记录定位信息</div>';
+    }
+    h += card(3, '定位', '打卡时自动获取', locInner);
+
+    /* ④ 照片 */
+    var photos = r.photos || [];
+    var phInner;
+    if (photos.length) {
+      var cells = '';
+      photos.forEach(function (src) {
+        cells += '<img src="' + src + '" alt="出勤照片">';
+      });
+      phInner = '<div class="v-grid">' + cells + '</div>';
+    } else {
+      phInner = '<div class="empty-ph">未上传照片</div>';
+    }
+    h += card(4, '照片', '共 ' + photos.length + ' 张', phInner);
+
+    /* ⑤ 特殊说明 */
+    var noteInner = r.note
+      ? '<div class="kv"><span class="k-lab">特殊说明</span><div class="k-val">' + esc(r.note) + '</div></div>'
+      : '<div class="empty-ph">无特殊说明</div>';
+    h += card(5, '特殊说明', '', noteInner);
+
+    /* ⑥ 底部提示 */
+    h += '<div class="v-note">出勤记录仅可查看，不可修改或删除<br>如有疑问请联系管理员核实</div>';
+
+    byId('viewBody').innerHTML = h;
+  }
+
+  /* ========== 启动 ========== */
+  function init() {
+    var q = qs();
+    if (!q.id) { toast('记录不存在'); backSoon(); return; }
+    var rec = null;
+    load().forEach(function (x) { if (x.id === q.id) rec = x; });
+    if (!rec) { toast('未找到该出勤记录'); backSoon(); return; }
+    render(rec);
+  }
+  init();
+</script>
+</body>
+</html>

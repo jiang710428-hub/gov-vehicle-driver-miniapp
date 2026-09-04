@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 维修保养</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --amber: #D97706;
+    --amber-d: #B45309;
+    --amber-bg: #FFFBEB;
+    --indigo: #4F46E5;
+    --indigo-bg: #EEF2FF;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fl-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fl-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fl-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fl-nav .back-btn:active { transform: scale(0.9); }
+  .fl-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fl-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 13px 16px 96px;
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .fl-body::-webkit-scrollbar { display: none; }
+  #flList { display: flex; flex-direction: column; gap: 11px; }
+
+  /* 吸顶区：类型 Tab + 搜索 */
+  .topbar {
+    position: sticky; top: 0; z-index: 40;
+    margin: -13px -16px 0; padding: 10px 16px 11px;
+    background: var(--bg);
+  }
+  .tabbar {
+    display: flex; background: #EDF1F7; border-radius: 11px; padding: 3px;
+    margin-bottom: 10px;
+  }
+  .tabbar .tb {
+    flex: 1; height: 32px; border: none; background: transparent;
+    border-radius: 9px; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; color: var(--sub);
+    font-family: inherit; letter-spacing: .5px;
+    transition: all .18s;
+  }
+  .tabbar .tb.on {
+    background: #fff; color: var(--primary);
+    box-shadow: 0 2px 6px rgba(15, 42, 86, .12);
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 12px; height: 40px;
+    padding: 0 13px; border: 1px solid #EDF0F6;
+    box-shadow: 0 2px 8px rgba(15, 77, 178, 0.05);
+  }
+  .search-box input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-size: 13px; color: var(--text); font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--muted); }
+  .search-clr {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #E5E9F2; color: #64748B; border: none; cursor: pointer;
+    display: none; align-items: center; justify-content: center; padding: 0;
+  }
+  .search-clr.show { display: inline-flex; }
+  .search-hint { margin-top: 6px; font-size: 10.5px; color: var(--muted); letter-spacing: .2px; padding-left: 2px; }
+  .search-hint b { font-weight: 600; color: var(--sub); }
+
+  /* 记录编号条（卡片顶部） */
+  .fc-code {
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+    padding-bottom: 9px; margin-bottom: 10px;
+    border-bottom: 1px dashed #EEF0F5;
+  }
+  .fc-code .c-ic {
+    width: 15px; height: 15px; border-radius: 5px; flex-shrink: 0;
+    background: #EEF2FF; color: #4F46E5;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fc-code .c-lab { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+  .fc-code .c-val {
+    font-size: 11.5px; font-weight: 800; color: var(--text); min-width: 0;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fc-code .c-plate {
+    margin-left: auto; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10.5px; font-weight: 700; color: var(--primary);
+    background: #EFF6FF; border-radius: 100px; padding: 2.5px 9px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .fc-code .c-plate:active { background: #E3EDFD; }
+
+  /* 维修保养记录卡片 */
+  .fl-card {
+    background: #fff; border-radius: 16px; padding: 12px 14px 9px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+    cursor: pointer;
+  }
+  .fl-card:active { background: #FAFBFD; }
+
+  .fc-head { display: flex; align-items: center; gap: 7px; }
+  /* 类型标签（保养=琥珀 / 维修=靛蓝），仅「全部」Tab 下展示 */
+  .fc-type {
+    flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: .5px;
+    border-radius: 6px; padding: 3.5px 7px;
+  }
+  .fc-type.mt { color: var(--amber-d); background: var(--amber-bg); }
+  .fc-type.rp { color: var(--indigo); background: var(--indigo-bg); }
+  .fc-head .fc-right { margin-left: auto; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+  .fc-tag {
+    font-size: 10.5px; font-weight: 600; border-radius: 100px; padding: 3px 9px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .fc-tag.mine { color: var(--green-dark); background: var(--green-bg); }
+  .fc-tag.other { color: var(--muted); background: #F1F3F8; }
+  .fc-ops { display: flex; gap: 6px; }
+  .fc-ops button {
+    border: none; background: none; cursor: pointer;
+    font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 100px;
+    display: inline-flex; align-items: center; gap: 3px; font-family: inherit;
+  }
+  .fc-ops .op-edit { color: var(--primary); background: #EFF6FF; }
+  .fc-ops .op-del { color: var(--red); background: var(--red-bg); }
+
+  .fc-main { display: flex; gap: 11px; margin-top: 10px; }
+  .fc-thumb {
+    width: 86px; height: 64px; border-radius: 10px; flex-shrink: 0;
+    background: #F0F2F7; border: 1px solid #E4E9F1; overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fc-thumb .fc-num {
+    position: absolute; right: 4px; bottom: 4px;
+    background: rgba(10, 22, 40, .72); color: #fff;
+    font-size: 9.5px; font-weight: 700; border-radius: 100px; padding: 1px 7px;
+    font-family: Inter, sans-serif;
+  }
+  .fc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .fc-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .fc-row .ic { width: 14px; text-align: center; flex-shrink: 0; color: #A5AEBE; display: flex; }
+  .fc-row .k { font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
+  .fc-row .v {
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .fc-row .v.item { font-weight: 600; }
+  .fc-row .v.amt { color: var(--primary); font-size: 14px; font-weight: 800; }
+  .fc-row .v.km { color: var(--sub); font-weight: 600; }
+
+  .fc-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 10px; padding-top: 8px; border-top: 1px dashed #EEF0F5;
+  }
+  .fc-who { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fc-who b { color: var(--text); font-weight: 700; }
+  .fc-who .no { font-family: Inter, sans-serif; }
+  .fc-next {
+    flex-shrink: 0; font-size: 10.5px; color: var(--muted); white-space: nowrap;
+  }
+  .fc-next b { color: var(--green-dark); font-weight: 800; font-family: Inter, "Sarasa Gothic SC", sans-serif; letter-spacing: .3px; }
+
+  /* 空状态 */
+  .empty {
+    padding: 44px 20px; text-align: center; color: var(--muted);
+  }
+  .empty .e-ic {
+    width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 20px;
+    background: linear-gradient(135deg, #EEF0FF, #E0E3FB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .e-t { font-size: 14px; font-weight: 700; color: var(--text); }
+  .empty .e-s { font-size: 11.5px; margin-top: 6px; line-height: 1.7; }
+  .empty-btn {
+    display: inline-flex; margin-top: 14px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 12.5px; font-weight: 600; font-family: inherit;
+    padding: 8px 20px; border-radius: 100px;
+    box-shadow: 0 6px 16px rgba(1, 77, 178, 0.24);
+  }
+
+  /* 底部新增按钮 */
+  .fab {
+    position: absolute; right: 18px; bottom: 22px; z-index: 120;
+    width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; box-shadow: 0 10px 24px rgba(1, 77, 178, 0.42);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .18s;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ===== 弹层 ===== */
+  .mask {
+    position: absolute; inset: 0; background: rgba(7, 15, 30, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity .28s; z-index: 300;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 310;
+    background: #fff; border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform .32s cubic-bezier(.32, .72, .28, 1);
+    box-shadow: 0 -12px 40px rgba(7, 15, 30, 0.18);
+    padding-bottom: 18px;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sh-handle { height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .sh-handle::before { content: ''; width: 38px; height: 4px; border-radius: 2px; background: #E2E7EE; }
+  .sh-body { padding: 0 18px; }
+
+  /* 新增类型选择 */
+  .tp-t { font-size: 16px; font-weight: 800; text-align: center; margin: 2px 0 12px; }
+  .tp-opt {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; height: 58px; border-radius: 14px;
+    border: 1.5px solid var(--line); background: #fff;
+    cursor: pointer; font-family: inherit; padding: 0 14px;
+    margin-bottom: 10px; transition: transform .15s, border-color .2s;
+  }
+  .tp-opt:active { transform: scale(0.99); }
+  .tp-opt .t-ic {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tp-opt.mt .t-ic { background: var(--amber-bg); color: var(--amber-d); }
+  .tp-opt.rp .t-ic { background: var(--indigo-bg); color: var(--indigo); }
+  .tp-opt .t-tx { flex: 1; text-align: left; }
+  .tp-opt .t-t { display: block; font-size: 14.5px; font-weight: 800; }
+  .tp-opt .t-s { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .tp-opt svg.arw { color: #C3CBD8; flex-shrink: 0; }
+  .tp-cancel {
+    width: 100%; height: 46px; border: none; border-radius: 13px;
+    background: #F1F3F8; color: var(--sub); font-size: 14.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* 删除确认 */
+  .cf-ic {
+    width: 56px; height: 56px; margin: 6px auto 12px; border-radius: 50%;
+    background: var(--red-bg); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cf-t { font-size: 16px; font-weight: 800; text-align: center; }
+  .cf-s { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; line-height: 1.7; }
+  .cf-ops { display: flex; gap: 10px; margin-top: 14px; }
+  .cf-ops button {
+    flex: 1; height: 46px; border-radius: 13px; cursor: pointer;
+    font-size: 15px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+    transition: transform .15s;
+  }
+  .cf-ops button:active { transform: scale(0.97); }
+  .cf-ops .cf-no { border: 1px solid #DCE2EC; background: #fff; color: var(--sub); }
+  .cf-ops .cf-yes { border: none; background: linear-gradient(135deg, #F87171, #DC2626); color: #fff; box-shadow: 0 8px 18px rgba(220, 38, 38, .30); }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 400;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">15:50</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="fl-content">
+        <div class="fl-nav">
+          <button class="back-btn" onclick="goBack()" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">维修保养</span>
+        </div>
+
+        <div class="fl-body">
+          <!-- 吸顶：类型 Tab + 搜索 -->
+          <div class="topbar">
+            <div class="tabbar" id="tabbar">
+              <button type="button" class="tb on" id="tbAll" onclick="setTab('all')">全部</button>
+              <button type="button" class="tb" id="tbMt" onclick="setTab('maintain')">保养</button>
+              <button type="button" class="tb" id="tbRp" onclick="setTab('repair')">维修</button>
+            </div>
+            <div class="search-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#94A3B8" stroke-width="2"/><path d="M15.5 15.5L20 20" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>
+              <input id="kwInput" type="text" placeholder="搜索车牌 / 编号 / 项目 / 创建人" oninput="onSearch(this.value)">
+              <button type="button" class="search-clr" id="kwClr" onclick="clearKw()" aria-label="清除搜索">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="search-hint">支持按 <b>车牌号</b> / <b>记录编号</b> / <b>项目</b> / <b>创建人</b> 搜索</div>
+          </div>
+
+          <div id="flList"></div>
+        </div>
+      </div>
+
+      <!-- 新增 FAB -->
+      <button class="fab" onclick="addRec()" aria-label="新增维修保养记录">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 弹层：选择新增类型 -->
+    <div class="mask" id="mask" onclick="onMask()"></div>
+    <div class="sheet" id="typeSheet">
+      <div class="sh-handle"></div>
+      <div class="sh-body">
+        <div class="tp-t">选择新增类型</div>
+        <button type="button" class="tp-opt mt" onclick="goAdd('maintain')">
+          <span class="t-ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.2 2.2M7.5 16.5l-2.2 2.2M18.7 18.7l-2.2-2.2M7.5 7.5L5.3 5.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </span>
+          <span class="t-tx"><span class="t-t">新增保养记录</span><span class="t-s">保养日期 · 公里数 · 项目 · 下次保养</span></span>
+          <svg class="arw" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="tp-opt rp" onclick="goAdd('repair')">
+          <span class="t-ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5a4.5 4.5 0 016-5.6L17 4.4l1.6 1.6 3.5-3.5a4.5 4.5 0 01-6.2 5.9L8.5 15.5a1.6 1.6 0 01-2.3 0l-.2-.2a1.6 1.6 0 010-2.3l7.4-7.4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 20l-4.6 1.8L3 21.6 5 16.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="t-tx"><span class="t-t">新增维修记录</span><span class="t-s">维修日期 · 项目 · 费用</span></span>
+          <svg class="arw" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="tp-cancel" onclick="closeType()">取消</button>
+      </div>
+    </div>
+
+    <!-- 删除确认弹层 -->
+    <div class="sheet" id="delSheet">
+      <div class="sh-handle"></div>
+      <div class="sh-body">
+        <div class="cf-ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="cf-t" id="delTitle">删除这条记录？</div>
+        <div class="cf-s" id="delInfo"></div>
+        <div class="cf-ops">
+          <button class="cf-no" onclick="closeDel()">取消</button>
+          <button class="cf-yes" onclick="doDelete()">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_maintain_list';
+  /* 当前登录驾驶员（演示固定：张三） */
+  var ME = { name: '张三', no: '10086' };
+  var PLATE = qs('plate');
+  var LIST = load();
+  var MAX_PHOTOS = 9;
+  var kw = '';          /* 搜索关键词（空 = 上下文视图） */
+  var curTab = 'all';   /* all | maintain | repair */
+
+  /* ========== 工具 ========== */
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(LIST)); }
+
+  /* ===== 记录编号 / 创建时间元数据 =====
+     编号规则：保养 BY / 维修 WX + 创建日(YYYYMMDD) + 当日流水(2 位自 01)，
+     创建时由系统自动生成并固定，用于搜索与追溯 */
+  function codePre(x) { return x.type === 'repair' ? 'WX' : 'BY'; }
+  function norm(s) {
+    return String(s == null ? '' : s).toLowerCase().replace(/[\s·．]/g, '');
+  }
+  function plateCount(arr) {
+    var seen = {}, n = 0;
+    arr.forEach(function (x) { if (!seen[x.plate]) { seen[x.plate] = 1; n++; } });
+    return n;
+  }
+  function uniqPlate(arr) {
+    var p = '';
+    for (var i = 0; i < arr.length; i++) {
+      if (!p) p = arr[i].plate;
+      else if (p !== arr[i].plate) return '';
+    }
+    return p;
+  }
+  function ensureMeta(list) {
+    /* 兼容旧数据：为缺失记录补 createdAt（到秒）与 code，演示数据一并规范 */
+    var changed = false;
+    var max = {};
+    list.forEach(function (x) {
+      if (!x.createdAt) {
+        var i = list.indexOf(x);
+        var d = x.date || today();
+        var hh = p2(8 + (i * 3) % 10), mi = p2((i * 13) % 60), ss = p2((i * 29) % 60);
+        x.createdAt = d + ' ' + hh + ':' + mi + ':' + ss;
+        changed = true;
+      }
+    });
+    list.forEach(function (x) {
+      var m = /^(BY|WX)(\d{8})-(\d{2})$/.exec(x.code || '');
+      if (m) { var k = m[1] + m[2]; max[k] = Math.max(max[k] || 0, +m[3]); }
+    });
+    list.forEach(function (x) {
+      if (x.code) return;
+      var day = (x.createdAt || today()).slice(0, 10).replace(/-/g, '');
+      var k = codePre(x) + day;
+      var n = (max[k] || 0) + 1; max[k] = n;
+      x.code = codePre(x) + day + '-' + p2(n);
+      changed = true;
+    });
+    return changed;
+  }
+  function genNewCode(list, pre) {
+    var d = new Date();
+    var day = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var re = new RegExp('^' + pre + '(\\d{8})-(\\d{2})$');
+    var max = 0;
+    list.forEach(function (x) {
+      var m = re.exec(x.code || '');
+      if (m && m[1] === day) max = Math.max(max, +m[2]);
+    });
+    return pre + day + '-' + p2(max + 1);
+  }
+
+  function tName(t) { return t === 'repair' ? '维修' : '保养'; }
+
+  /* 当前可视记录（搜索时全局匹配 车牌号/编号/项目/创建人；否则按 Tab + 进入车辆过滤） */
+  function visibleList() {
+    var q = kw.trim();
+    var arr = LIST.filter(function (x) { return curTab === 'all' || x.type === curTab; });
+    if (q) {
+      var nq = norm(q);
+      arr = arr.filter(function (x) {
+        return norm(x.code).indexOf(nq) >= 0
+          || norm(x.plate).indexOf(nq) >= 0
+          || norm(x.driverName).indexOf(nq) >= 0
+          || norm(x.driverNo).indexOf(nq) >= 0
+          || norm(x.item).indexOf(nq) >= 0;
+      });
+    } else if (PLATE) {
+      arr = arr.filter(function (x) { return x.plate === PLATE; });
+    }
+    return arr.slice().sort(function (a, b) {
+      return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+    });
+  }
+
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function today() { return dstr(new Date()); }
+  function isMine(r) { return r.driverName === ME.name && r.driverNo === ME.no; }
+  function yuan(v) {
+    if (v === '' || v == null) return '--';
+    return '¥' + Number(v).toFixed(2);
+  }
+  function fmtKm(v) {
+    if (v === '' || v == null) return '--';
+    return String(v) + ' 公里';
+  }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function goBack() {
+    /* 维修保养列表由车辆详情「维修保养」入口进入（带 plate）；
+       直接返回车辆详情页，不依赖浏览器历史栈 */
+    if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
+    if (window.history && history.length > 1) { history.back(); return; }
+    location.href = 'vehicles.html';
+  }
+
+  /* ========== 演示数据 ========== */
+  function demoImg(k) {
+    var colors = [
+      { bg: '#EEF2FF', c1: '#4F46E5', c2: '#C7D2FE' },
+      { bg: '#FFFBEB', c1: '#B45309', c2: '#FDE68A' },
+      { bg: '#EAF1FC', c1: '#014DB2', c2: '#B9D2F0' }
+    ];
+    var c = colors[k % colors.length];
+    var s = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'>" +
+      "<rect width='320' height='240' rx='16' fill='" + c.bg + "'/>" +
+      "<rect x='20' y='20' width='280' height='200' rx='12' fill='#fff' opacity='.9'/>" +
+      "<rect x='40' y='40' width='120' height='14' rx='7' fill='" + c.c1 + "' opacity='.9'/>" +
+      "<rect x='40' y='66' width='240' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='84' width='200' height='8' rx='4' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='120' width='150' height='10' rx='5' fill='" + c.c1 + "' opacity='.85'/>" +
+      "<rect x='40' y='150' width='200' height='10' rx='5' fill='" + c.c2 + "'/>" +
+      "<rect x='40' y='172' width='120' height='24' rx='12' fill='" + c.c1 + "' opacity='.95'/>" +
+      "</svg>";
+    return 'data:image/svg+xml,' + encodeURIComponent(s);
+  }
+
+  /* 指定车辆无记录时补 3 条演示记录（含类型与归属差异，便于体验增删改权限） */
+  function seedFor(plate) {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    function off(o) { var t = new Date(y, m - 1, day + o); return dstr(t); }
+    var S = [
+      { id: 'M' + Date.now() + '1', type: 'maintain', plate: plate, date: off(-3),
+        km: '46500', item: '更换机油机滤、空调滤芯', cost: '680.00', nextDate: off(175),
+        photos: [demoImg(0), demoImg(1)],
+        driverName: '张三', driverNo: '10086' },
+      { id: 'M' + Date.now() + '2', type: 'maintain', plate: plate, date: off(-30),
+        km: '45100', item: '四轮定位与动平衡', cost: '320.00', nextDate: off(150),
+        photos: [demoImg(1)],
+        driverName: '李建国', driverNo: '10012' },
+      { id: 'M' + Date.now() + '3', type: 'repair', plate: plate, date: off(-8),
+        item: '更换雨刮器总成', cost: '240.00',
+        photos: [demoImg(2), demoImg(0)],
+        driverName: '王强', driverNo: '10038' }
+    ];
+    LIST = LIST.concat(S);
+  }
+
+  /* 全库为空时跨 3 辆车预置演示记录（覆盖 保养/维修 与 本人/他人） */
+  function seedAll() {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    function off(o) { var t = new Date(y, m - 1, day + o); return dstr(t); }
+    var S = [
+      { id: 'M' + Date.now() + '11', type: 'maintain', plate: '苏A·12345', date: off(-2),
+        km: '45230', item: '更换机油、机滤、空调滤芯', cost: '680.00', nextDate: off(178),
+        photos: [demoImg(0), demoImg(1)],
+        driverName: '张三', driverNo: '10086' },
+      { id: 'M' + Date.now() + '12', type: 'maintain', plate: '苏A·12345', date: off(-35),
+        km: '44860', item: '更换机油机滤', cost: '520.00', nextDate: off(150),
+        photos: [demoImg(1)],
+        driverName: '王强', driverNo: '10038' },
+      { id: 'M' + Date.now() + '13', type: 'repair', plate: '苏A·12345', date: off(-9),
+        item: '更换前轮刹车片', cost: '960.00',
+        photos: [demoImg(2), demoImg(0)],
+        driverName: '李建国', driverNo: '10012' },
+      { id: 'M' + Date.now() + '21', type: 'maintain', plate: '苏A·23456', date: off(-40),
+        km: '51200', item: '更换机油机滤、空气滤芯', cost: '760.00', nextDate: off(160),
+        photos: [demoImg(0)],
+        driverName: '李建国', driverNo: '10012' },
+      { id: 'M' + Date.now() + '22', type: 'repair', plate: '苏A·23456', date: off(-3),
+        item: '右后车门剐蹭补漆', cost: '1200.00',
+        photos: [demoImg(1), demoImg(2)],
+        driverName: '王强', driverNo: '10038' },
+      { id: 'M' + Date.now() + '31', type: 'repair', plate: '苏A·67890', date: off(-5),
+        item: '更换右前轮胎', cost: '780.00',
+        photos: [demoImg(2)],
+        driverName: '张三', driverNo: '10086' }
+    ];
+    LIST = LIST.concat(S);
+  }
+
+  /* ========== 渲染 ========== */
+  function rowHtml(ic, k, v, cls) {
+    return '<span class="fc-row"><span class="ic">' + ic + '</span>' +
+      '<span class="k">' + k + '</span><span class="v' + (cls ? ' ' + cls : '') + '">' + v + '</span></span>';
+  }
+
+  function cardHtml(r, showPlate) {
+    var mine = isMine(r);
+    var maintain = r.type !== 'repair';
+    var thumb = r.photos && r.photos.length
+      ? '<img src="' + r.photos[0] + '" alt="凭证照片">' +
+        (r.photos.length > 1 ? '<span class="fc-num">共 ' + r.photos.length + ' 张</span>' : '')
+      : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="6" width="17" height="13" rx="2.5" stroke="#C6CFDC" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3" stroke="#C6CFDC" stroke-width="1.6"/></svg>';
+
+    var right = mine
+      ? '<span class="fc-tag mine">我的记录</span><span class="fc-ops">' +
+        '<button class="op-edit" onclick="event.stopPropagation();edit(\'' + r.id + '\')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M14.5 5.5l4 4M5 19l4.2-1 10-10a1.4 1.4 0 0 0-2-2l-10 10L5 19z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>编辑</button>' +
+        '<button class="op-del" onclick="event.stopPropagation();askDel(\'' + r.id + '\')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>删除</button>' +
+        '</span>'
+      : '<span class="fc-tag other">他人记录</span>';
+
+    /* 信息行：保养含公里数；维修不含 */
+    var rows = '';
+    if (maintain) {
+      rows += rowHtml(
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.2 2.2M7.5 16.5l-2.2 2.2M18.7 18.7l-2.2-2.2M7.5 7.5L5.3 5.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        '保养项目', esc(r.item), 'item');
+      rows += rowHtml(
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4.5 19.5h15M5.5 19.5V10a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v9.5M12 19.5V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4.5 19.5a1 1 0 0 1-1-1v-3.2a1 1 0 0 1 1-1h2v4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        '保养公里数', fmtKm(r.km), 'km');
+      rows += rowHtml(
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14M3.5 20h11M9 9.5h2M9 13h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 12h1.6a1.4 1.4 0 0 1 1.4 1.4V17a1.5 1.5 0 0 0 3 0v-5.2l-2.2-2.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '保养费用', yuan(r.cost), 'amt');
+    } else {
+      rows += rowHtml(
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5a4.5 4.5 0 016-5.6L17 4.4l1.6 1.6 3.5-3.5a4.5 4.5 0 01-6.2 5.9L8.5 15.5a1.6 1.6 0 01-2.3 0l-.2-.2a1.6 1.6 0 010-2.3l7.4-7.4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 20l-4.6 1.8L3 21.6 5 16.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '维修项目', esc(r.item), 'item');
+      rows += rowHtml(
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14M3.5 20h11M9 9.5h2M9 13h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 12h1.6a1.4 1.4 0 0 1 1.4 1.4V17a1.5 1.5 0 0 0 3 0v-5.2l-2.2-2.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '维修费用', yuan(r.cost), 'amt');
+    }
+
+    var typeTag = curTab === 'all'
+      ? '<span class="fc-type ' + (maintain ? 'mt' : 'rp') + '">' + tName(r.type) + '</span>'
+      : '';
+
+    return '' +
+      '<div class="fl-card" data-mine="' + (mine ? '1' : '0') + '" onclick="onCard(\'' + r.id + '\')">' +
+        '<div class="fc-code">' +
+          '<span class="c-ic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h12A1.5 1.5 0 0 1 19.5 5v16l-3-1.6-3 1.6-3-1.6-3 1.6V5A1.5 1.5 0 0 1 6 3.5z" stroke="#4F46E5" stroke-width="2" stroke-linejoin="round"/><path d="M8.8 8.5h6.4M8.8 12h6.4" stroke="#4F46E5" stroke-width="2" stroke-linecap="round"/></svg></span>' +
+          '<span class="c-lab">记录编号</span>' +
+          '<span class="c-val">' + esc(r.code || '--') + '</span>' +
+          (showPlate ? '<span class="c-plate" onclick="event.stopPropagation();jumpPlate(\'' + esc(r.plate) + '\')">' + esc(r.plate) + '</span>' : '') +
+        '</div>' +
+        '<div class="fc-head">' + typeTag +
+          '<span class="fc-right">' + right + '</span>' +
+        '</div>' +
+        '<div class="fc-main">' +
+          '<span class="fc-thumb">' + thumb + '</span>' +
+          '<span class="fc-info">' + rows + '</span>' +
+        '</div>' +
+        '<div class="fc-foot">' +
+          '<span class="fc-who">创建人 <b>' + esc(r.driverName) + '</b> · 编号 <span class="no">' + esc(r.driverNo) + '</span></span>' +
+          (maintain && r.nextDate ? '<span class="fc-next">下次保养 <b>' + esc(r.nextDate) + '</b></span>' : '') +
+        '</div>' +
+      '</div>';
+  }
+
+  function emptyTip(t) {
+    if (t === 'maintain') return '暂无保养记录';
+    if (t === 'repair') return '暂无维修记录';
+    return '暂无维修保养记录';
+  }
+
+  function render() {
+    var box = document.getElementById('flList');
+    var arr = visibleList();
+    var searching = kw.trim() !== '';
+    var multiCars = plateCount(arr) > 1;   /* 结果跨多车：卡片需展示车牌 chip 以区分/跳转 */
+
+    /* 空态 */
+    if (!arr.length) {
+      box.innerHTML =
+        '<div class="empty"><div class="e-ic">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5a4.5 4.5 0 016-5.6L17 4.4l1.6 1.6 3.5-3.5a4.5 4.5 0 01-6.2 5.9L8.5 15.5a1.6 1.6 0 01-2.3 0l-.2-.2a1.6 1.6 0 010-2.3l7.4-7.4z" stroke="#4F46E5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 20l-4.6 1.8L3 21.6 5 16.5" stroke="#4F46E5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</div><div class="e-t">' + (searching ? '未找到相关记录' : emptyTip(curTab)) + '</div>' +
+        '<div class="e-s">' + (searching
+          ? '试试输入完整的车牌号、记录编号、项目或创建人'
+          : (PLATE
+            ? '点击右下角 <b>＋</b> 选择类型后新增本条车辆的记录'
+            : '暂无演示数据，将从车辆详情进入时自动生成')) + '</div>' +
+        (searching ? '<button class="empty-btn" onclick="clearKw()">清除搜索</button>' : '') +
+        '</div>';
+      return;
+    }
+
+    /* 列表 */
+    var h = '';
+    arr.forEach(function (r) { h += cardHtml(r, multiCars); });
+    box.innerHTML = h;
+  }
+
+  /* ========== Tab ========== */
+  function setTab(t) {
+    curTab = t;
+    var on = { all: 'tbAll', maintain: 'tbMt', repair: 'tbRp' };
+    var id;
+    for (var k in on) {
+      id = on[k];
+      var el = document.getElementById(id);
+      if (el) el.className = 'tb' + (k === t ? ' on' : '');
+    }
+    render();
+  }
+
+  /* ========== 搜索 ========== */
+  function onSearch(v) {
+    kw = v;
+    var clr = document.getElementById('kwClr');
+    if (clr) clr.className = 'search-clr' + (kw.trim() ? ' show' : '');
+    render();
+  }
+  function clearKw() {
+    kw = '';
+    var inp = document.getElementById('kwInput'); if (inp) inp.value = '';
+    var clr = document.getElementById('kwClr'); if (clr) clr.className = 'search-clr';
+    render();
+  }
+  /* 卡片车牌 chip：跨车结果中点击直接进入对应车辆列表 */
+  function jumpPlate(p) { location.href = 'maintain-records.html?plate=' + encodeURIComponent(p); }
+
+  /* ========== 操作 ========== */
+  function addRec() { showSheet('typeSheet'); }
+  function closeType() { hideSheet('typeSheet'); }
+  function goAdd(type) {
+    var arr = visibleList();
+    var p = uniqPlate(arr);
+    if (p) { location.href = 'maintain-edit.html?plate=' + encodeURIComponent(p) + '&type=' + type; return; }
+    if (PLATE && !kw.trim()) { location.href = 'maintain-edit.html?plate=' + encodeURIComponent(PLATE) + '&type=' + type; return; }
+    hideSheet('typeSheet');
+    toast(kw.trim()
+      ? '当前为多车搜索结果，请先点击车牌进入具体车辆后新增'
+      : '请先进入具体车辆（点击车牌或从车辆详情进入）后新增');
+  }
+  function findRec(id) {
+    for (var i = 0; i < LIST.length; i++) { if (LIST[i].id === id) return LIST[i]; }
+    return null;
+  }
+  function onCard(id) {
+    var r = findRec(id);
+    if (!r) return;
+    /* 本人记录点卡片直接进入编辑页；他人记录可点入只读详情完整查看 */
+    location.href = isMine(r)
+      ? 'maintain-edit.html?id=' + id
+      : 'maintain-view.html?id=' + encodeURIComponent(id);
+  }
+  function edit(id) { location.href = 'maintain-edit.html?id=' + id; }
+
+  var delId = null;
+  function askDel(id) {
+    var r = findRec(id);
+    if (!r) { return; }
+    if (!isMine(r)) { toast('仅可删除自己创建的记录'); return; }
+    delId = id;
+    document.getElementById('delTitle').textContent = '删除这条' + tName(r.type) + '记录？';
+    document.getElementById('delInfo').textContent =
+      r.date + ' · ' + r.item + ' · ' + yuan(r.cost);
+    showSheet('delSheet');
+  }
+  function doDelete() {
+    if (!delId) return;
+    LIST = LIST.filter(function (x) { return x.id !== delId; });
+    save();
+    closeDel();
+    toast('维修保养记录已删除');
+    render();
+  }
+  function closeDel() {
+    delId = null;
+    hideSheet('delSheet');
+  }
+
+  /* ========== 弹层 / toast ========== */
+  function showSheet(id) { document.getElementById(id).classList.add('show'); document.getElementById('mask').classList.add('show'); }
+  function hideSheet(id) { document.getElementById(id).classList.remove('show'); document.getElementById('mask').classList.remove('show'); }
+  /* 遮罩点击：关闭当前打开的弹层（类型选择 或 删除确认） */
+  function onMask() {
+    hideSheet('typeSheet');
+    hideSheet('delSheet');
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+
+  /* ========== 初始化 ========== */
+  (function init() {
+    var changed = ensureMeta(LIST);
+    if (changed) save();
+    if (!LIST.length) {
+      /* 全库为空：跨车预置演示记录（覆盖 保养/维修 与 本人/他人） */
+      seedAll();
+      ensureMeta(LIST);
+      save();
+    } else if (PLATE && !LIST.some(function (x) { return x.plate === PLATE; })) {
+      /* 有目标车辆但无其记录：仅补该车演示数据 */
+      seedFor(PLATE);
+      ensureMeta(LIST);
+      save();
+    }
+    render();
+  })();
+</script>
+</body>
+</html>

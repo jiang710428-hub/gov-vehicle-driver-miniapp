@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 派单记录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .dp-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .dp-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .dp-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .dp-nav .back-btn:active { transform: scale(0.9); }
+  .dp-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .dp-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 14px 16px 96px;
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .dp-body::-webkit-scrollbar { display: none; }
+  #dpList { display: flex; flex-direction: column; gap: 11px; }
+
+  /* 分组标题 */
+  .seg-h { display: flex; align-items: center; gap: 6px; padding: 3px 2px 0; }
+  .seg-h .tick { width: 4px; height: 13px; border-radius: 2px; background: linear-gradient(180deg, #0A5FD4, #014DB2); }
+  .seg-h .t { font-size: 13px; font-weight: 700; letter-spacing: .3px; }
+
+  /* 派单卡片 */
+  .dp-card {
+    background: #fff; border-radius: 16px; padding: 13px 15px 9px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    border: 1px solid rgba(15,77,178,.04);
+    cursor: pointer;
+  }
+  .dp-card:active { background: #FAFBFD; }
+
+  .c-top { display: flex; align-items: center; gap: 7px; }
+  .c-date { font-size: 15px; font-weight: 800; }
+  .c-week { font-size: 11px; color: var(--muted); }
+  .c-today {
+    font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .5px;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    border-radius: 100px; padding: 2px 8px;
+  }
+  .c-stat { margin-left: auto; font-size: 10.5px; font-weight: 700; border-radius: 100px; padding: 3px 9px; }
+  .c-stat.wait { color: var(--amber); background: var(--amber-bg); border: 1px solid #FDE68A; }
+  .c-stat.doing { color: var(--primary); background: #EFF6FF; border: 1px solid #BFD8F6; }
+  .c-stat.done { color: var(--green-dark); background: var(--green-bg); border: 1px solid #A7F3D0; }
+
+  .c-plate-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+  .c-plate {
+    background: #0A1628; color: #fff;
+    font-size: 12.5px; font-weight: 800; letter-spacing: 1.5px;
+    padding: 3px 9px; border-radius: 6px;
+  }
+  .c-model { font-size: 11.5px; color: var(--muted); }
+  .c-reason {
+    display: inline-block;
+    font-size: 12px; font-weight: 600; color: var(--primary);
+    background: #EFF6FF; border-radius: 100px; padding: 3px 10px;
+  }
+
+  .c-grid { margin-top: 9px; display: flex; flex-direction: column; gap: 5px; }
+  .c-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); }
+  .c-row .ic { width: 14px; text-align: center; flex-shrink: 0; color: #A5AEBE; }
+  .c-row b { color: var(--text); font-weight: 700; }
+  .c-row .arrow {
+    margin: 0 2px; color: #C2C9D4; font-weight: 700;
+  }
+
+  /* 底部栏：左用车事由 + 右操作 */
+  .c-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-top: 9px; padding-top: 8px; border-top: 1px dashed #EEF0F5;
+  }
+  .c-foot .c-reason {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .c-ops { display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+  .c-ops button {
+    border: none; background: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 100px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .c-ops .op-edit { color: var(--primary); background: #EFF6FF; }
+  .c-ops .op-del { color: var(--red); background: var(--red-bg); }
+
+  /* 空状态 */
+  .empty {
+    padding: 44px 20px; text-align: center; color: var(--muted);
+  }
+  .empty .e-ic {
+    width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 20px;
+    background: linear-gradient(135deg, #EAF1FC, #DCE9FB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .e-t { font-size: 14px; font-weight: 700; color: var(--text); }
+  .empty .e-s { font-size: 11.5px; margin-top: 6px; line-height: 1.7; }
+
+  /* 底部新增按钮 */
+  .fab {
+    position: absolute; right: 18px; bottom: 22px; z-index: 120;
+    width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; box-shadow: 0 10px 24px rgba(1, 77, 178, 0.42);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .18s;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ===== 弹层 ===== */
+  .mask {
+    position: absolute; inset: 0; background: rgba(7, 15, 30, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity .28s; z-index: 300;
+  }
+  .mask.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 310;
+    background: #fff; border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform .32s cubic-bezier(.32, .72, .28, 1);
+    box-shadow: 0 -12px 40px rgba(7, 15, 30, 0.18);
+    padding-bottom: 18px;
+  }
+  .sheet.show { transform: translateY(0); }
+  .sh-handle { height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .sh-handle::before { content: ''; width: 38px; height: 4px; border-radius: 2px; background: #E2E7EE; }
+  .sh-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 18px 12px; }
+  .sh-head .t { font-size: 17px; font-weight: 800; }
+  .sh-head .sh-x {
+    width: 28px; height: 28px; border-radius: 50%; border: none; background: #F0F2F7;
+    cursor: pointer; color: var(--muted); font-size: 13px; line-height: 28px; text-align: center;
+  }
+  .sh-body { padding: 0 18px; }
+
+  /* 删除确认 */
+  .cf-ic {
+    width: 56px; height: 56px; margin: 6px auto 12px; border-radius: 50%;
+    background: var(--red-bg); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cf-t { font-size: 16px; font-weight: 800; text-align: center; }
+  .cf-s { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; line-height: 1.7; }
+  .cf-ops { display: flex; gap: 10px; margin-top: 14px; }
+  .cf-ops button {
+    flex: 1; height: 46px; border-radius: 13px; cursor: pointer;
+    font-size: 15px; font-weight: 700; font-family: inherit; letter-spacing: 1px;
+    transition: transform .15s;
+  }
+  .cf-ops button:active { transform: scale(0.97); }
+  .cf-ops .cf-no { border: 1px solid #DCE2EC; background: #fff; color: var(--sub); }
+  .cf-ops .cf-yes { border: none; background: linear-gradient(135deg, #F87171, #DC2626); color: #fff; box-shadow: 0 8px 18px rgba(220, 38, 38, .30); }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .9); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 400;
+    white-space: nowrap; max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="page">
+      <div class="statusbar">
+        <span class="time">10:24</span>
+        <span class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+      </div>
+
+      <div class="dp-content">
+        <div class="dp-nav">
+          <button class="back-btn" onclick="location.href='my.html'" aria-label="返回">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="title">派单记录</span>
+        </div>
+
+        <div class="dp-body">
+          <div class="seg-h">
+            <span class="tick"></span><span class="t">我的派单</span>
+          </div>
+          <div id="dpList"></div>
+        </div>
+      </div>
+
+      <!-- 新增 FAB -->
+      <button class="fab" onclick="location.href='dispatch-edit.html'" aria-label="新增派单">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 删除确认弹层 -->
+    <div class="mask" id="mask" onclick="closeDel()"></div>
+    <div class="sheet" id="delSheet">
+      <div class="sh-handle"></div>
+      <div class="sh-body">
+        <div class="cf-ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="cf-t">删除这条派单？</div>
+        <div class="cf-s" id="delInfo"></div>
+        <div class="cf-ops">
+          <button class="cf-no" onclick="closeDel()">取消</button>
+          <button class="cf-yes" onclick="doDelete()">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  var KEY = 'zp_dispatch_list';
+  var LIST = load();
+
+  /* ========== 工具 ========== */
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; }
+    catch (e) { return null; }
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(LIST)); }
+
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function parseDate(s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); }
+  function dstr(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function weekText(d) { return '周' + '日一二三四五六'[d.getDay()]; }
+  function today() { var d = new Date(); return dstr(d); }
+  function hmMin(t) { var a = String(t).split(':'); return (+a[0]) * 60 + (+a[1] || 0); }
+
+  /* ========== 演示数据 ========== */
+  function demoImg(k) {
+    var colors = [
+      { bg: '#EAF1FC', c1: '#014DB2', c2: '#B9D2F0' },
+      { bg: '#ECFDF5', c1: '#047857', c2: '#A7F3D0' },
+      { bg: '#FFFBEB', c1: '#D97706', c2: '#FDE68A' }
+    ];
+    var c = colors[k % colors.length];
+    var s = "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'>" +
+      "<rect width='320' height='200' rx='14' fill='" + c.bg + "'/>" +
+      "<rect x='120' y='56' width='80' height='16' rx='8' fill='" + c.c1 + "' opacity='.85'/>" +
+      "<rect x='80' y='88' width='160' height='10' rx='5' fill='" + c.c2 + "'/>" +
+      "<rect x='80' y='108' width='140' height='10' rx='5' fill='" + c.c2 + "'/>" +
+      "<circle cx='60' cy='150' r='6' fill='" + c.c1 + "' opacity='.7'/>" +
+      "<rect x='120' y='142' width='100' height='14' rx='7' fill='" + c.c1 + "' opacity='.9'/>" +
+      "</svg>";
+    return 'data:image/svg+xml,' + encodeURIComponent(s);
+  }
+
+  function seed() {
+    var d = new Date();
+    var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    function off(o) { var t = new Date(y, m - 1, day + o); return dstr(t); }
+    var models = { '苏A·12345': '丰田 凯美瑞 2.5G', '苏A·67890': '大众 迈腾 330TSI', '苏A·54321': '奥迪 A6L 45TFSI' };
+    var S = [
+      {
+        id: 'D' + Date.now() + '1', date: off(-1), plate: '苏A·12345', model: models['苏A·12345'],
+        reason: '公务会议', depTime: '09:00', retTime: '18:00',
+        from: '区政府', to: '市政务服务中心',
+        peers: ['李四'], photos: [demoImg(0), demoImg(1)],
+        note: '全天会议用车，含往返接送材料'
+      },
+      {
+        id: 'D' + Date.now() + '2', date: off(0), plate: '苏A·67890', model: models['苏A·67890'],
+        reason: '应急公务', depTime: '08:30', retTime: '17:30',
+        from: '区应急管理局', to: '智慧新城园区',
+        peers: ['王五', '赵六'], photos: [],
+        note: ''
+      },
+      {
+        id: 'D' + Date.now() + '3', date: off(1), plate: '苏A·54321', model: models['苏A·54321'],
+        reason: '公务接待', depTime: '14:00', retTime: '19:00',
+        from: '区政府', to: '高铁南站',
+        peers: ['孙梅'], photos: [],
+        note: '接待来宾，需提前 30 分钟到站'
+      }
+    ];
+    LIST = S;
+    save();
+  }
+
+  /* ========== 状态推导 ========== */
+  function statusOf(r) {
+    var t = today();
+    if (r.date < t) return 'done';
+    if (r.date > t) return 'wait';
+    /* 今天：比较当前时间 */
+    var d = new Date();
+    var now = d.getHours() * 60 + d.getMinutes();
+    if (hmMin(r.depTime) > now) return 'wait';
+    if (r.retTime && hmMin(r.retTime) < now) return 'done';
+    return 'doing';
+  }
+  var STAT_TXT = { wait: '待出车', doing: '进行中', done: '已完成' };
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* ========== 渲染 ========== */
+  function statText(dateStr) {
+    var d = parseDate(dateStr), t = today();
+    var txt = (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekText(d);
+    if (dateStr === t) txt += ' · 今天';
+    return txt;
+  }
+
+  function render() {
+    var box = document.getElementById('dpList');
+    if (!LIST.length) {
+      box.innerHTML =
+        '<div class="empty"><div class="e-ic">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15z" stroke="#014DB2" stroke-width="1.7"/><path d="M9 8h6M9 11.5h6M9 15h3" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+        '</div><div class="e-t">暂无派单数据</div>' +
+        '<div class="e-s">点击下方 <b>＋</b> 新增派单，<br>记录今天的出车任务</div></div>';
+      return;
+    }
+
+    var arr = LIST.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return a.depTime < b.depTime ? 1 : -1;
+    });
+    var h = '';
+    arr.forEach(function (r) {
+      var stt = statusOf(r);
+      h +=
+        '<div class="dp-card" onclick="edit(\'' + r.id + '\')">' +
+        '<div class="c-top"><span class="c-date">' + statText(r.date) + '</span>' +
+        '<span class="c-stat ' + stt + '">' + STAT_TXT[stt] + '</span></div>' +
+        '<div class="c-plate-row">' +
+        '<span class="c-plate">' + esc(r.plate) + '</span>' +
+        '<span class="c-model">' + esc(r.model || '') + '</span>' +
+        '</div>' +
+        '<div class="c-grid">' +
+        '<div class="c-row"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.6V12l3.2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>出发时间<b>' + esc(r.depTime) + '</b><span class="arrow">→</span>返回时间<b>' + esc(r.retTime) + '</b></div>' +
+        '<div class="c-row"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21c3.6-3.3 5.6-6.3 5.6-9.2A5.6 5.6 0 0 0 6.4 11.8c0 2.9 2 5.9 5.6 9.2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="11.5" r="2.2" stroke="currentColor" stroke-width="1.7"/></svg></span><b>' + esc(r.from) + '</b><span class="arrow">→</span><b>' + esc(r.to) + '</b></div>' +
+        '</div>' +
+        '<div class="c-foot">' +
+        '<span class="c-reason">' + esc(r.reason) + '</span>' +
+        '<div class="c-ops">' +
+        '<button class="op-edit" onclick="event.stopPropagation();edit(\'' + r.id + '\')">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M14.5 5.5l4 4M5 19l4.2-1 10-10a1.4 1.4 0 0 0-2-2l-10 10L5 19z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>编辑</button>' +
+        '<button class="op-del" onclick="event.stopPropagation();askDel(\'' + r.id + '\')">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>删除</button>' +
+        '</div></div></div>';
+    });
+    box.innerHTML = h;
+  }
+
+  /* ========== 操作 ========== */
+  function edit(id) { location.href = 'dispatch-edit.html?id=' + id; }
+
+  var delId = null;
+  function askDel(id) {
+    delId = id;
+    var r = null;
+    LIST.forEach(function (x) { if (x.id === id) r = x; });
+    if (r) document.getElementById('delInfo').textContent =
+      statText(r.date).replace(' · 今天', '') + ' · ' + r.plate + ' ' + r.reason;
+    showSheet('delSheet');
+  }
+  function doDelete() {
+    if (!delId) return;
+    LIST = LIST.filter(function (x) { return x.id !== delId; });
+    save();
+    closeDel();
+    toast('派单已删除');
+    render();
+  }
+  function closeDel() {
+    delId = null;
+    hideSheet('delSheet');
+  }
+
+  /* ========== 弹层 ========== */
+  function showSheet(id) { document.getElementById(id).classList.add('show'); document.getElementById('mask').classList.add('show'); }
+  function hideSheet(id) { document.getElementById(id).classList.remove('show'); document.getElementById('mask').classList.remove('show'); }
+
+  /* ========== toast ========== */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+
+  /* ========== 初始化 ========== */
+  if (!LIST) seed();
+  render();
+</script>
+</body>
+</html>

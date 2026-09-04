@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 车辆使用日志</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-2: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --red-2: #B91C1C;
+    --red-bg: #FEF2F2;
+    --bg: #F7F8FA;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .fl-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* 导航栏 */
+  .fl-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .fl-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .fl-nav .back-btn:active { transform: scale(0.9); }
+  .fl-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+
+  .fl-body {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    padding: 13px 16px 36px;
+  }
+  .fl-body::-webkit-scrollbar { display: none; }
+
+  /* ===== 顶部工具区：搜索（驾驶员/记录编号）+ 单日日期筛选（底部弹层） ===== */
+  .log-bar {
+    background: #fff; border-radius: 14px; padding: 11px 12px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .lb-row { display: flex; align-items: center; gap: 9px; }
+  /* 搜索框：驾驶员 / 记录编号 */
+  .lb-srch {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+    height: 38px; padding: 0 6px 0 11px;
+    background: #F5F7FA; border: 1px solid transparent; border-radius: 10px;
+    transition: border-color .15s, background .15s;
+  }
+  .lb-srch:focus-within { background: #fff; border-color: #C9D8EC; }
+  .lb-srch svg { flex-shrink: 0; color: var(--faint); }
+  .lb-srch input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-size: 12.5px; color: var(--text); font-family: inherit;
+  }
+  .lb-srch input::placeholder { color: var(--faint); }
+  .lb-srch .sr-clr {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: none;
+    background: #E4E9F1; color: var(--muted); cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1;
+  }
+  .lb-srch.has .sr-clr { display: inline-flex; }
+
+  /* 日期筛选按钮（点击弹出底部日历层，单选某一天） */
+  .lb-date {
+    flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+    height: 38px; padding: 0 12px; font-family: inherit;
+    background: #fff; border: 1px solid #E4E9F1; border-radius: 10px;
+    cursor: pointer; color: var(--text);
+    transition: border-color .15s, background .15s;
+  }
+  .lb-date:active { transform: scale(.97); }
+  .lb-date .ic { display: flex; color: var(--muted); }
+  .lb-date .tx { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lb-date .chev { display: flex; color: var(--faint); }
+  .lb-date .d-clr {
+    display: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; color: var(--primary);
+    align-items: center; justify-content: center; font-size: 9px; line-height: 1;
+  }
+  .lb-date.on { border-color: var(--primary); background: #EFF6FF; }
+  .lb-date.on .tx { color: var(--primary); }
+  .lb-date.on .chev { display: none; }
+  .lb-date.on .d-clr { display: flex; }
+
+  /* ===== 底部弹层：选择用车日期（单日） ===== */
+  .date-mask {
+    position: absolute; inset: 0; z-index: 90;
+    display: flex; align-items: flex-end;
+    background: rgba(9, 17, 34, 0.52);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .date-mask.show { opacity: 1; pointer-events: auto; }
+  .date-sheet {
+    width: 100%; background: #fff;
+    border-radius: 20px 20px 0 0; padding: 18px 16px 20px;
+    box-shadow: 0 -10px 40px rgba(9, 17, 34, 0.12);
+    transform: translateY(105%); transition: transform .26s cubic-bezier(.33, .8, .3, 1);
+  }
+  .date-mask.show .date-sheet { transform: translateY(0); }
+  .ds-head { display: flex; align-items: center; justify-content: space-between; }
+  .ds-head .t { font-size: 15px; font-weight: 800; }
+  .hd-r { display: flex; align-items: center; gap: 8px; }
+  .ds-close {
+    width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer;
+    background: #F0F2F7; color: var(--muted); font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ds-nav { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+  .ds-nav .nav-btn {
+    width: 32px; height: 32px; border-radius: 9px; border: none; cursor: pointer;
+    background: #F5F7FA; color: var(--text); font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ds-nav .nav-btn:active { background: #E8EDF5; }
+  .ds-nav .ym { min-width: 112px; text-align: center; font-size: 15px; font-weight: 800; letter-spacing: .3px; }
+  .today-btn {
+    height: 30px; padding: 0 13px; border-radius: 100px; border: none; cursor: pointer;
+    background: #EFF6FF; color: var(--primary); font-size: 12px; font-weight: 700; font-family: inherit;
+  }
+  .today-btn:active { background: #DFEDFF; }
+  .ds-week { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 14px; }
+  .ds-week span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); padding: 2px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 4px; }
+  .cal-cell {
+    height: 40px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    border-radius: 10px; cursor: pointer; position: relative;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .cal-cell:active { background: #EEF3FB; }
+  .cal-cell.dim { color: #C6CDD9; font-weight: 500; cursor: default; }
+  .cal-cell.tday::after {
+    content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--primary);
+  }
+  .cal-cell.sel {
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    box-shadow: 0 4px 10px rgba(1, 77, 178, 0.3);
+  }
+  .cal-cell.sel::after { display: none; }
+  .ds-foot { margin-top: 12px; display: flex; }
+  .ds-foot .clr {
+    flex: 1; height: 42px; border-radius: 12px; border: none; cursor: pointer;
+    background: #F3F5F9; color: var(--sub); font-size: 13.5px; font-weight: 800; font-family: inherit;
+    transition: background .15s;
+  }
+  .ds-foot .clr:active { background: #E8EDF5; }
+  .ds-foot .clr.off { color: #C2C9D6; cursor: default; background: #F7F8FB; }
+
+  /* 日期分组头（与工作记录列表一致） */
+  .day-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 18px; padding: 0 2px 10px;
+  }
+  #logList .day-head:first-child { margin-top: 14px; }
+  .day-head .cal {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #E4EEFB, #D3E4F7);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .day-head .d-txt { font-size: 13.5px; font-weight: 700; }
+  .day-head .d-txt .weak { font-weight: 500; color: var(--muted); font-size: 11.5px; margin-left: 5px; }
+  .day-head .d-flag {
+    font-size: 10px; font-weight: 700; border-radius: 100px; padding: 2px 8px;
+    background: var(--blue-bg); color: var(--primary); flex-shrink: 0;
+  }
+  .day-head .d-flag.yest { background: #F3F4F6; color: var(--sub); }
+  .day-head .d-cnt { margin-left: auto; font-size: 11px; color: var(--faint); flex-shrink: 0; }
+
+  /* 行程卡（复用工作记录行程卡样式） */
+  .trip-card {
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+    cursor: pointer; transition: transform .12s, box-shadow .2s;
+  }
+  .trip-card:hover { box-shadow: 0 8px 22px rgba(15, 42, 86, 0.10); }
+  .trip-card:active { transform: scale(0.985); }
+  .trip-card + .trip-card { margin-top: 10px; }
+
+  /* 记录编号条（行程卡头部） */
+  .tc-no {
+    display: flex; align-items: center; gap: 7px;
+    padding-bottom: 10px; margin-bottom: 11px;
+    border-bottom: 1px dashed #EEF0F5;
+  }
+  .tc-no .no-ic {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #EAF1FC, #DCECFB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tc-no .no-lab { font-size: 10px; color: var(--faint); letter-spacing: .6px; flex-shrink: 0; }
+  .tc-no .no-val {
+    flex: 1; min-width: 0;
+    font-size: 12.5px; font-weight: 800; letter-spacing: .5px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tc-no .no-go {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: #F1F3F8; color: #9AA5B5;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .trip-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px;
+  }
+  .trip-grid .cell { min-width: 0; }
+  .trip-grid .cell .k { font-size: 10px; color: var(--faint); letter-spacing: .5px; display: block; }
+  .trip-grid .cell .v {
+    font-size: 13px; font-weight: 700; margin-top: 3px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .trip-grid .cell .v em {
+    font-style: normal; font-size: 9.5px; font-weight: 500; color: var(--muted); margin-left: 2px;
+  }
+  .trip-grid .cell .v.blue { color: var(--primary); }
+  .trip-grid .cell .v.wrap { white-space: normal; line-height: 1.25; font-size: 12.5px; }
+  .trip-grid .cell .v .sub {
+    display: block; font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 2px;
+  }
+
+  .ck-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; font-weight: 700; border-radius: 100px; padding: 2px 8px;
+  }
+  .ck-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; }
+  .ck-badge.ok { background: var(--green-bg); color: var(--green-2); }
+  .ck-badge.ok::before { background: var(--green); }
+  .ck-badge.bad { background: var(--red-bg); color: var(--red-2); }
+  .ck-badge.bad::before { background: var(--red); }
+
+  /* 空态 */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 20px; color: var(--muted); gap: 10px;
+  }
+  .empty .eico {
+    width: 60px; height: 60px; border-radius: 50%; background: #F0F2F7;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty .etxt { font-size: 13px; font-weight: 600; color: var(--sub); }
+  .empty .esub { font-size: 11px; color: var(--muted); line-height: 1.5; text-align: center; }
+  .empty .empty-btn {
+    margin-top: 8px; height: 36px; padding: 0 22px; border-radius: 100px;
+    border: none; background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 14px rgba(1, 77, 178, 0.28);
+  }
+  .empty .empty-btn.ghost {
+    background: #fff; color: var(--primary);
+    border: 1px solid #C9D8EC; box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="page">
+    <div class="statusbar">
+      <span class="time">15:50</span>
+      <div class="capsule">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+
+    <div class="fl-content">
+      <div class="fl-nav">
+        <button class="back-btn" onclick="goBack()" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="title">车辆使用日志</span>
+      </div>
+
+      <div class="fl-body">
+        <!-- 顶部工具区：搜索（驾驶员/记录编号）+ 单日日期筛选 -->
+        <div class="log-bar">
+          <div class="lb-row">
+            <div class="lb-srch" id="srchBox">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.9"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              <input type="text" id="kwInp" placeholder="搜索驾驶员 / 记录编号" autocomplete="off">
+              <button type="button" class="sr-clr" id="kwClr" onclick="clearKw()">✕</button>
+            </div>
+            <button type="button" class="lb-date" id="dateBtn" onclick="openDateSheet()">
+              <span class="ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="tx" id="dateTxt">用车日期</span>
+              <span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="d-clr" id="dateClear" onclick="event.stopPropagation();clearDate()">✕</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 日期分组行程列表（卡片与工作记录一致，点击进行程详情） -->
+        <div id="logList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部弹层：选择用车日期（单日筛选） -->
+  <div class="date-mask" id="dateMask" onclick="closeDateSheet()">
+    <div class="date-sheet" onclick="event.stopPropagation()">
+      <div class="ds-head">
+        <span class="t">选择用车日期</span>
+        <div class="hd-r">
+          <button type="button" class="today-btn" onclick="calToday()">今天</button>
+          <button type="button" class="ds-close" onclick="closeDateSheet()" aria-label="关闭">✕</button>
+        </div>
+      </div>
+      <div class="ds-nav">
+        <button type="button" class="nav-btn" onclick="calMove(-1)">‹</button>
+        <span class="ym" id="calYM"></span>
+        <button type="button" class="nav-btn" onclick="calMove(1)">›</button>
+      </div>
+      <div class="ds-week">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="ds-foot">
+        <button type="button" class="clr off" id="clrDate" onclick="clearDate()">清除日期筛选</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===== 行程台账：与「行程详情 / 工作记录(前7条)」同源同序（id 对应全局 index，编号同规则） =====
+     车辆使用日志 = 这台车被车队内全部驾驶员使用的行程记录（不只本人） */
+  var TRIPS = [
+    { date:'2026-09-02', dM:'9月2日', flag:'今天', weak:'周三',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'07:10', end:'07:58', sKm:12560, eKm:12580,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    { date:'2026-09-01', dM:'9月1日', flag:'昨天', weak:'周二',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'08:20', end:'18:05', sKm:12310, eKm:12560,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    { date:'2026-08-30', dM:'8月30日', flag:'', weak:'周日',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'张三',
+      start:'09:30', end:'17:20', sKm:13100, eKm:13340,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'王五' },
+    { date:'2026-08-28', dM:'8月28日', flag:'', weak:'周五',
+      plate:'苏A·54321', model:'奥迪 A6L 45 TFSI', driver:'张三',
+      start:'08:15', end:'12:30', sKm:11020, eKm:11160,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'赵六' },
+    { date:'2026-08-26', dM:'8月26日', flag:'', weak:'周三',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'张三',
+      start:'08:30', end:'18:20', sKm:11800, eKm:12110,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'李四' },
+    { date:'2026-08-21', dM:'8月21日', flag:'', weak:'周五',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'张三',
+      start:'13:00', end:'14:20', sKm:23600, eKm:23650,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'孙七' },
+    /* 演示行程：接车检查 / 使用过程异常 / 还车检查 三步全异常 */
+    { date:'2026-08-18', dM:'8月18日', flag:'', weak:'周二',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'张三',
+      start:'09:10', end:'11:35', sKm:23520, eKm:23580,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'吴九' },
+    /* ---- 车队全量台账（其他驾驶员行程，id 7-14 与行程详情同序） ---- */
+    { date:'2026-08-29', dM:'8月29日', flag:'', weak:'周六',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'李建国',
+      start:'07:50', end:'12:10', sKm:12160, eKm:12260,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    { date:'2026-08-25', dM:'8月25日', flag:'', weak:'周二',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'王强',
+      start:'13:20', end:'17:45', sKm:11600, eKm:11760,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'孙梅' },
+    { date:'2026-08-19', dM:'8月19日', flag:'', weak:'周三',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'孙梅',
+      start:'09:05', end:'11:30', sKm:11420, eKm:11560,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'李四' },
+    { date:'2026-08-31', dM:'8月31日', flag:'', weak:'周一',
+      plate:'苏A·23456', model:'大众 帕萨特 380TSI', driver:'李建国',
+      start:'08:10', end:'12:20', sKm:20300, eKm:20440,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'李建国' },
+    { date:'2026-08-24', dM:'8月24日', flag:'', weak:'周一',
+      plate:'苏A·34567', model:'别克 GL8 ES 陆尊', driver:'王强',
+      start:'09:20', end:'16:30', sKm:31880, eKm:32100,
+      check:'异常', returnCheck:'异常', exception:'异常', lastDriver:'王强' },
+    { date:'2026-08-27', dM:'8月27日', flag:'', weak:'周四',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'孙梅',
+      start:'14:00', end:'15:40', sKm:13020, eKm:13080,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅' },
+    { date:'2026-08-23', dM:'8月23日', flag:'', weak:'周日',
+      plate:'苏A·54321', model:'奥迪 A6L 45 TFSI', driver:'李建国',
+      start:'10:00', end:'11:15', sKm:10940, eKm:11000,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'赵六' },
+    { date:'2026-08-20', dM:'8月20日', flag:'', weak:'周四',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'王强',
+      start:'08:30', end:'12:50', sKm:23580, eKm:23600,
+      check:'正常', returnCheck:'正常', exception:'正常', lastDriver:'张三' },
+    /* ---- 单类异常演示（每车 3 条：仅车辆检查 / 仅异常上报 / 仅结束里程，id 15-32 与异常档案同序） ---- */
+    { date:'2026-08-22', dM:'8月22日', flag:'', weak:'周六',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'李建国',
+      start:'07:30', end:'08:20', sKm:11570, eKm:11600,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅' },
+    { date:'2026-08-17', dM:'8月17日', flag:'', weak:'周一',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'王强',
+      start:'10:20', end:'11:35', sKm:11340, eKm:11410,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'孙梅' },
+    { date:'2026-08-16', dM:'8月16日', flag:'', weak:'周日',
+      plate:'苏A·12345', model:'丰田 凯美瑞 2.5G', driver:'孙梅',
+      start:'09:30', end:'11:20', sKm:11260, eKm:11340,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'王强' },
+    { date:'2026-08-15', dM:'8月15日', flag:'', weak:'周六',
+      plate:'苏A·23456', model:'大众 帕萨特 380TSI', driver:'赵六',
+      start:'09:00', end:'10:15', sKm:20060, eKm:20130,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国' },
+    { date:'2026-08-14', dM:'8月14日', flag:'', weak:'周五',
+      plate:'苏A·23456', model:'大众 帕萨特 380TSI', driver:'李建国',
+      start:'08:30', end:'11:05', sKm:19990, eKm:20060,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'赵六' },
+    { date:'2026-08-13', dM:'8月13日', flag:'', weak:'周四',
+      plate:'苏A·23456', model:'大众 帕萨特 380TSI', driver:'吴九',
+      start:'14:00', end:'15:10', sKm:19920, eKm:19990,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'李建国' },
+    { date:'2026-08-12', dM:'8月12日', flag:'', weak:'周三',
+      plate:'苏A·34567', model:'别克 GL8 ES 陆尊', driver:'王强',
+      start:'08:40', end:'09:30', sKm:31640, eKm:31710,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国' },
+    { date:'2026-08-11', dM:'8月11日', flag:'', weak:'周二',
+      plate:'苏A·34567', model:'别克 GL8 ES 陆尊', driver:'孙梅',
+      start:'09:10', end:'10:40', sKm:31570, eKm:31640,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'王强' },
+    { date:'2026-08-10', dM:'8月10日', flag:'', weak:'周一',
+      plate:'苏A·34567', model:'别克 GL8 ES 陆尊', driver:'李建国',
+      start:'13:30', end:'14:50', sKm:31500, eKm:31570,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'孙梅' },
+    { date:'2026-08-09', dM:'8月9日', flag:'', weak:'周日',
+      plate:'苏A·54321', model:'奥迪 A6L 45 TFSI', driver:'王五',
+      start:'09:20', end:'10:15', sKm:10840, eKm:10900,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'李建国' },
+    { date:'2026-08-08', dM:'8月8日', flag:'', weak:'周六',
+      plate:'苏A·54321', model:'奥迪 A6L 45 TFSI', driver:'李建国',
+      start:'10:00', end:'11:40', sKm:10770, eKm:10840,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'王五' },
+    { date:'2026-08-07', dM:'8月7日', flag:'', weak:'周五',
+      plate:'苏A·54321', model:'奥迪 A6L 45 TFSI', driver:'孙七',
+      start:'08:50', end:'10:05', sKm:10700, eKm:10770,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'李建国' },
+    { date:'2026-08-06', dM:'8月6日', flag:'', weak:'周四',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'赵六',
+      start:'08:20', end:'09:15', sKm:12875, eKm:12940,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'孙梅' },
+    { date:'2026-08-05', dM:'8月5日', flag:'', weak:'周三',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'孙梅',
+      start:'13:40', end:'15:20', sKm:12810, eKm:12875,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'赵六' },
+    { date:'2026-08-04', dM:'8月4日', flag:'', weak:'周二',
+      plate:'苏A·67890', model:'大众 迈腾 330TSI', driver:'吴九',
+      start:'15:30', end:'16:40', sKm:12750, eKm:12810,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'孙梅' },
+    { date:'2026-08-03', dM:'8月3日', flag:'', weak:'周一',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'孙七',
+      start:'09:00', end:'10:20', sKm:23410, eKm:23470,
+      check:'异常', returnCheck:'正常', exception:'正常', lastDriver:'王强' },
+    { date:'2026-08-02', dM:'8月2日', flag:'', weak:'周日',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'王强',
+      start:'10:30', end:'12:00', sKm:23350, eKm:23410,
+      check:'正常', returnCheck:'正常', exception:'异常', lastDriver:'孙七' },
+    { date:'2026-08-01', dM:'8月1日', flag:'', weak:'周六',
+      plate:'苏A·88888', model:'别克 GL8 ES 陆尊', driver:'李四',
+      start:'09:00', end:'10:30', sKm:23290, eKm:23350,
+      check:'正常', returnCheck:'异常', exception:'正常', lastDriver:'王强' }
+  ];
+
+  /* ===== 记录编号（与工作记录/行程详情同规则）：GZ + 用车日期(YYYYMMDD) + 当日行程流水 ===== */
+  (function autoNo() {
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    var seen = {};
+    TRIPS.forEach(function (t) {
+      var day = t.date.replace(/-/g, '');
+      seen[day] = (seen[day] || 0) + 1;
+      t.no = 'GZ' + day + '-' + pad(seen[day]);
+    });
+  })();
+
+  /* ===== 工具 ===== */
+  function qs(k) {
+    var m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function byId(id) { return document.getElementById(id); }
+  function fmt(n) { return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function badgeCheck(v) {
+    var cls = v === '正常' ? 'ok' : 'bad';
+    return '<span class="ck-badge ' + cls + '">' + v + '</span>';
+  }
+  function el(v) { return (v === undefined || v === null) ? '' : v; }
+
+  /* ===== 渲染 ===== */
+  function renderTrips(list) {
+    var box = byId('logList');
+    if (list.length === 0) {
+      var filtered = !!byId('kwInp').value.trim() || !!dSel;
+      box.innerHTML =
+        '<div class="empty"><div class="eico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="#9AA5B5" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="#9AA5B5" stroke-width="1.8" stroke-linecap="round"/></svg></div>' +
+        (filtered
+          ? '<span class="etxt">没有找到符合条件的行程</span>' +
+            '<span class="esub">换个驾驶员或记录编号，<br>或调整用车日期再试试</span>' +
+            '<button class="empty-btn" onclick="resetAll()">重置筛选</button>'
+          : '<span class="etxt">该车暂无行程记录</span>' +
+            '<span class="esub">驾驶员使用这台车产生的行程，<br>会自动归档为车辆使用日志</span>') +
+        '</div>';
+      return;
+    }
+    var html = '', lastDate = '';
+    list.forEach(function (t) {
+      if (t.date !== lastDate) {
+        lastDate = t.date;
+        var cnt = list.filter(function (x) { return x.date === t.date; }).length;
+        html += '<div class="day-head">' +
+          '<span class="cal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke="#014DB2" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/></svg></span>' +
+          '<span class="d-txt">' + t.dM + '<span class="weak">' + t.weak + '</span></span>' +
+          (t.flag ? '<span class="d-flag' + (t.flag === '昨天' ? ' yest' : '') + '">' + t.flag + '</span>' : '') +
+          '<span class="d-cnt">' + cnt + ' 次行程</span>' +
+        '</div>';
+      }
+      html +=
+        '<div class="trip-card" onclick="openTrip(' + TRIPS.indexOf(t) + ')">' +
+          '<div class="tc-no">' +
+            '<span class="no-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h12A1.5 1.5 0 0 1 19.5 5v16l-3-1.6-3 1.6-3-1.6-3 1.6V5A1.5 1.5 0 0 1 6 3.5z" stroke="#014DB2" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.8 8.5h6.4M8.8 12h6.4" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/></svg></span>' +
+            '<span class="no-lab">记录编号</span>' +
+            '<span class="no-val">' + t.no + '</span>' +
+            '<span class="no-go"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          '</div>' +
+          '<div class="trip-grid">' +
+            '<div class="cell"><span class="k">本次驾驶员</span><span class="v">' + t.driver + '</span></div>' +
+            '<div class="cell"><span class="k">开始用车时间</span><span class="v">' + t.start + '</span></div>' +
+            '<div class="cell"><span class="k">结束用车时间</span><span class="v">' + t.end + '</span></div>' +
+            '<div class="cell"><span class="k">当日使用车辆</span><span class="v wrap">' + t.plate + '<span class="sub">' + t.model + '</span></span></div>' +
+            '<div class="cell"><span class="k">上次驾驶员</span><span class="v">' + t.lastDriver + '</span></div>' +
+            '<div class="cell"><span class="k">开始公里</span><span class="v">' + fmt(t.sKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">结束公里</span><span class="v">' + fmt(t.eKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">本次里程</span><span class="v blue">' + fmt(t.eKm - t.sKm) + '<em>km</em></span></div>' +
+            '<div class="cell"><span class="k">接车检查</span><span class="v">' + badgeCheck(t.check) + '</span></div>' +
+            '<div class="cell"><span class="k">还车检查</span><span class="v">' + badgeCheck(t.returnCheck) + '</span></div>' +
+            '<div class="cell"><span class="k">使用过程异常</span><span class="v">' + badgeCheck(t.exception) + '</span></div>' +
+          '</div>' +
+        '</div>';
+    });
+    box.innerHTML = html;
+  }
+
+  /* ===== 筛选状态 ===== */
+  var PLATE = qs('plate');
+  var dSel = '';          /* 选中的用车日期 YYYY-MM-DD（单日筛选） */
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  var DEMO_TODAY = '2026-09-02';   /* 演示基准"今天"：与台账 flag 一致，固定不随真实日期漂移 */
+  function todayStr() { return DEMO_TODAY; }
+
+  /* 关键字命中：驾驶员姓名 或 记录编号（GZ…-… / 去分隔符 / 纯数字均可） */
+  function kwHit(t, kw) {
+    if (!kw) return true;
+    var u = kw.toUpperCase();
+    if (t.driver && t.driver.indexOf(kw) >= 0) return true;
+    var bare = t.no.toUpperCase();
+    if (bare.indexOf(u) >= 0) return true;
+    var k = u.replace(/[^A-Z0-9]/g, '');
+    if (k && bare.replace(/[^A-Z0-9]/g, '').indexOf(k) >= 0) return true;
+    var kd = u.replace(/\D/g, '');
+    if (kd && bare.replace(/\D/g, '').indexOf(kd) >= 0) return true;
+    return false;
+  }
+
+  function applyFilter() {
+    var kw = byId('kwInp').value.trim();
+    var list = TRIPS.filter(function (t) {
+      if (PLATE && t.plate !== PLATE) return false;
+      if (!kwHit(t, kw)) return false;
+      if (dSel && t.date !== dSel) return false;
+      return true;
+    });
+    byId('srchBox').classList.toggle('has', !!kw);
+    updateDateUI();
+    renderTrips(list);
+  }
+
+  /* 日期筛选按钮状态：默认「用车日期」/ 选中显示日期 + 可清除 */
+  function updateDateUI() {
+    var on = !!dSel;
+    byId('dateBtn').classList.toggle('on', on);
+    byId('dateTxt').textContent = dSel || '用车日期';
+    byId('dateClear').style.display = on ? 'flex' : 'none';
+    var clr = byId('clrDate');
+    clr.classList.toggle('off', !on);
+  }
+
+  function clearKw() {
+    byId('kwInp').value = '';
+    applyFilter();
+  }
+  function clearDate() {
+    dSel = '';
+    closeDateSheet();
+    applyFilter();
+  }
+  function resetAll() {
+    byId('kwInp').value = '';
+    dSel = '';
+    applyFilter();
+  }
+
+  /* ===== 底部弹层：选择用车日期（单日） ===== */
+  var calY = 0, calM = 0;   /* 弹层当前展示的年月（月 1-12） */
+
+  function openDateSheet() {
+    var d = dSel ? new Date(dSel.replace(/-/g, '/')) : new Date(DEMO_TODAY.replace(/-/g, '/'));
+    calY = d.getFullYear(); calM = d.getMonth() + 1;
+    renderCal();
+    byId('dateMask').classList.add('show');
+  }
+  function closeDateSheet() { byId('dateMask').classList.remove('show'); }
+  function calMove(step) {
+    calM += step;
+    if (calM === 0) { calM = 12; calY--; }
+    if (calM === 13) { calM = 1; calY++; }
+    renderCal();
+  }
+  function calToday() {
+    var s = todayStr();
+    var d = new Date(s.replace(/-/g, '/'));
+    calY = d.getFullYear(); calM = d.getMonth() + 1;
+    dSel = s;
+    renderCal();
+    applyFilter();
+    closeDateSheet();
+  }
+  function renderCal() {
+    byId('calYM').textContent = calY + ' 年 ' + calM + ' 月';
+    var first = new Date(calY, calM - 1, 1);
+    var offset = first.getDay();                 /* 0=周日 */
+    var dim = new Date(calY, calM, 0).getDate(); /* 当月天数 */
+    var prevDim = new Date(calY, calM - 1, 0).getDate();
+    var td = todayStr();
+    var cells = '', i, d;
+    /* 上月补齐格（灰显不可点） */
+    for (i = 0; i < offset; i++) {
+      cells += '<span class="cal-cell dim">' + (prevDim - offset + 1 + i) + '</span>';
+    }
+    for (d = 1; d <= dim; d++) {
+      var ds = calY + '-' + pad2(calM) + '-' + pad2(d);
+      var cls = 'cal-cell' + (ds === dSel ? ' sel' : (ds === td ? ' tday' : ''));
+      cells += '<span class="' + cls + '" data-date="' + ds + '" onclick="pickDate(\'' + ds + '\')">' + d + '</span>';
+    }
+    /* 下月补齐格（凑整周） */
+    var fill = (offset + dim) % 7;
+    if (fill) for (var n = 1; n <= 7 - fill; n++) {
+      cells += '<span class="cal-cell dim">' + n + '</span>';
+    }
+    byId('calGrid').innerHTML = cells;
+  }
+  function pickDate(ds) {
+    dSel = ds;
+    closeDateSheet();
+    applyFilter();
+  }
+
+  /* ===== 入口 ===== */
+  (function init() {
+    /* 输入实时过滤 */
+    byId('kwInp').addEventListener('input', applyFilter);
+    applyFilter();
+  })();
+
+  /* ===== 跳转 ===== */
+  function openTrip(i) {
+    location.href = 'trip-detail.html?id=' + i + (PLATE ? '&plate=' + encodeURIComponent(PLATE) : '');
+  }
+  function goBack() {
+    if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
+    location.href = 'vehicles.html';
+  }
+</script>
+
+</body>
+</html>

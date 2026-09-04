@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 车辆详情</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --green: #10B981;
+    --green-d: #059669;
+    --amber: #F59E0B;
+    --amber-d: #D97706;
+    --red: #EF4444;
+    --red-d: #DC2626;
+    --gray-d: #64748B;
+    --indigo: #4F46E5;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --line: #EEF0F5;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 24px 12px; color: var(--text); overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg); border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  /* 顶部渐变区（与车辆信息页同源） */
+  .vd-top {
+    flex-shrink: 0; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1A6FE0 0%, #0A4FB8 52%, #001645 100%);
+    color: #fff; padding-bottom: 26px;
+  }
+  .vd-top::before {
+    content: ''; position: absolute; right: -52px; top: -78px;
+    width: 200px; height: 200px; border-radius: 50%;
+    border: 26px solid rgba(255,255,255,.05); pointer-events: none;
+  }
+  .vd-top .time { color: #fff; }
+
+  .statusbar {
+    height: 62px; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  /* 导航行 */
+  .vd-nav {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 16px; margin-top: 2px;
+  }
+  .vd-nav .back-btn {
+    position: absolute; left: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.24);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    backdrop-filter: blur(4px); transition: transform .15s;
+  }
+  .vd-nav .back-btn:active { transform: scale(.9); }
+  .vd-nav .tt { font-size: 17px; font-weight: 700; letter-spacing: .4px; }
+  .vd-nav .tt-sub { font-size: 10.5px; color: rgba(255,255,255,.6); margin-top: 2px; text-align: center; }
+
+  .vd-body {
+    flex: 1; position: relative; z-index: 1;
+    overflow-y: auto; scrollbar-width: none;
+    padding: 12px 16px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .vd-body::-webkit-scrollbar { display: none; }
+
+  /* 车辆头卡 */
+  .v-hero {
+    background: linear-gradient(135deg, #F7FAFF 0%, #EAF2FD 100%);
+    border: 1px solid #D9E6F9; border-radius: 18px;
+    padding: 15px;
+    display: flex; gap: 13px; align-items: center;
+  }
+  .v-hero .h-img {
+    width: 132px; height: 88px; border-radius: 12px; flex-shrink: 0; overflow: hidden;
+    background: #fff; border: 1px solid rgba(15,77,178,.08);
+  }
+  .v-hero .h-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .v-hero .h-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .v-hero .h-plate {
+    font-size: 21px; font-weight: 800; letter-spacing: .8px; color: var(--primary);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif; line-height: 1.1;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .v-hero .h-model { font-size: 12.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .v-hero .h-drv { font-size: 10.5px; color: var(--muted); }
+  .v-hero .h-drv b { font-weight: 600; color: var(--primary-2); }
+
+  /* 维保/车辆状态徽章 */
+  .v-st {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 24px; padding: 0 10px; border-radius: 100px;
+    font-size: 11px; font-weight: 600; letter-spacing: .5px;
+  }
+  .v-st .sdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .st-normal  { background: #F0FDF4; color: var(--green-d); }
+  .st-normal .sdot { background: var(--green); box-shadow: 0 0 0 2.5px rgba(16,185,129,.22); }
+  .st-repair  { background: #FEF2F2; color: var(--red-d); }
+  .st-repair .sdot { background: var(--red); box-shadow: 0 0 0 2.5px rgba(239,68,68,.22); }
+  .st-maintain { background: #FFFBEB; color: var(--amber-d); }
+  .st-maintain .sdot { background: var(--amber); box-shadow: 0 0 0 2.5px rgba(245,158,11,.22); }
+  .st-off { background: #F1F3F8; color: var(--gray-d); }
+  .st-off .sdot { background: #94A3B8; box-shadow: 0 0 0 2.5px rgba(148,163,184,.25); }
+
+  /* 通用白卡 */
+  .v-card {
+    background: var(--card); border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(15, 77, 178, 0.05);
+    border: 1px solid rgba(15,77,178,.04);
+    padding: 14px 14px 15px;
+  }
+  .sec-tt {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 700; margin-bottom: 11px;
+  }
+  .sec-tt::before {
+    content: ''; width: 4px; height: 14px; border-radius: 3px;
+    background: linear-gradient(180deg, #0A5FD4, #014DB2);
+  }
+
+  /* 基础信息（标签-值行式） */
+  .info-list { display: flex; flex-direction: column; }
+  .info-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 9px 2px; min-width: 0;
+  }
+  .info-row + .info-row { border-top: 1px solid var(--line); }
+  .info-row .k { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .info-row .val {
+    font-size: 13px; font-weight: 600; text-align: right;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .info-row .val.blue { color: var(--primary); }
+  .info-row .val.vin { font-size: 12px; letter-spacing: .6px; }
+  .info-row .val.st-ok { color: var(--green-d); }
+  .info-row .val.st-bad { color: var(--red-d); }
+  .info-row .val.st-warn { color: var(--amber-d); }
+  .info-row .val.st-gone { color: var(--gray-d); }
+  .info-row .val .sdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .val.st-ok .sdot { background: var(--green); box-shadow: 0 0 0 2.5px rgba(16,185,129,.2); }
+  .val.st-bad .sdot { background: var(--red); box-shadow: 0 0 0 2.5px rgba(239,68,68,.2); }
+  .val.st-warn .sdot { background: var(--amber); box-shadow: 0 0 0 2.5px rgba(245,158,11,.2); }
+  .val.st-gone .sdot { background: #94A3B8; box-shadow: 0 0 0 2.5px rgba(148,163,184,.22); }
+
+  /* 功能入口 */
+  .fn-list { display: flex; flex-direction: column; }
+  .fn-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 2px; cursor: pointer; transition: background .15s;
+    border-radius: 10px;
+  }
+  .fn-item:active { background: #F6F8FC; }
+  .fn-item + .fn-item { border-top: 1px solid var(--line); }
+  .fn-item .f-ic {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fn-item .f-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .fn-item .f-t { font-size: 14px; font-weight: 600; }
+  .fn-item .f-arw { color: #C3CBD8; flex-shrink: 0; display: flex; }
+
+  /* 功能项倒计时徽章（保险 / 年检到期不足 90 天或已到期时显示） */
+  .fn-item .f-s {
+    flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: .2px;
+    line-height: 1; padding: 4px 7px; border-radius: 100px; white-space: nowrap;
+  }
+  .fn-item .f-s.warn { color: var(--amber-d); background: #FFFBEB; }
+  .fn-item .f-s.hot  { color: var(--red-d);   background: #FEF2F2; }
+  .fn-item .f-s.exp  { color: var(--red-d);   background: #FEF2F2; }
+
+  .ic-fuel   { background: #EFF6FF; }  .ic-fuel svg { stroke: #0A5FD4; }
+  .ic-ins    { background: #F0FDF4; }  .ic-ins svg { stroke: #10B981; }
+  .ic-year   { background: #FFFBEB; }  .ic-year svg { stroke: #D97706; }
+  .ic-mt     { background: #EEF2FF; }  .ic-mt svg { stroke: #4F46E5; }
+  .ic-abn    { background: #FEF2F2; }  .ic-abn svg { stroke: #DC2626; }
+  .ic-log    { background: #F1F5F9; }  .ic-log svg { stroke: #475569; }
+
+  /* toast */
+  .toast {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(10, 22, 40, 0.88); color: #fff; font-size: 13px;
+    padding: 9px 18px; border-radius: 100px; opacity: 0; pointer-events: none;
+    transition: all .3s; white-space: nowrap; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <div class="page">
+    <div class="vd-top">
+      <div class="statusbar">
+        <span class="time">15:50</span>
+        <div class="capsule">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+      </div>
+      <div class="vd-nav">
+        <button type="button" class="back-btn" onclick="goBack()" aria-label="返回">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 4.5L8 12l7 7.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div>
+          <div class="tt">车辆详情</div>
+          <div class="tt-sub">车辆基础信息 · 服务入口</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vd-body" id="body">
+      <!-- 动态渲染 -->
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  /* ===== 演示数据：与车辆信息页 vehicles.html 保持一致 ===== */
+  var VEHICLES = [
+    { plate: '苏A·12345', img: 'img/car-camry.png',  brand: '丰田', model: '凯美瑞 2.5G',     driver: '张三',    vin: 'LVGBE40K8NG123456', engine: 'A25A-045678',  buyDate: '2021-03-12', dept: '综合办公室', st: 'normal' },
+    { plate: '苏A·23456', img: 'img/car-magotan.png', brand: '大众', model: '帕萨特 380TSI',   driver: '李建国',  vin: 'LSVCT6A40NC234567', engine: 'EA888-034219', buyDate: '2022-06-08', dept: '综合办公室', st: 'normal' },
+    { plate: '苏A·34567', img: 'img/car-gl8.png',    brand: '别克', model: 'GL8 ES 陆尊',     driver: '王强',    vin: 'LSGAB84L5NC345678', engine: 'LSY-067845',   buyDate: '2020-11-25', dept: '机关事务中心', st: 'normal' },
+    { plate: '苏A·67890', img: 'img/car-magotan.png', brand: '大众', model: '迈腾 330TSI',     driver: '待分配',  vin: 'LSVCD24C2NM456789', engine: 'EA888-052916', buyDate: '2019-09-30', dept: '机关事务中心', st: 'repair' },
+    { plate: '苏A·54321', img: 'img/car-audi.png',   brand: '奥迪', model: 'A6L 45 TFSI',    driver: '待分配',  vin: 'LFV3A28W8NN567890', engine: 'DKW-018273',   buyDate: '2018-04-16', dept: '接待联络处', st: 'maintain' },
+    { plate: '苏A·88888', img: 'img/car-gl8.png',    brand: '别克', model: 'GL8 ES',         driver: '待分配',  vin: 'LSGAB84L5NM678901', engine: 'LSY-083412',   buyDate: '2017-01-19', dept: '接待联络处', st: 'off' }
+  ];
+
+  var ST = {
+    normal:   { label: '正常',   cls: 'st-normal',  valCls: 'st-ok' },
+    repair:   { label: '维修中', cls: 'st-repair',  valCls: 'st-bad' },
+    maintain: { label: '保养中', cls: 'st-maintain', valCls: 'st-warn' },
+    off:      { label: '停用',   cls: 'st-off',     valCls: 'st-gone' }
+  };
+
+  var FN = [
+    { icon: 'ic-fuel', t: '加油记录',  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 012-2h6a2 2 0 012 2v14M3.5 20h11" stroke-width="1.7" stroke-linecap="round"/><path d="M9 9.5h2M9 13h2" stroke-width="1.7" stroke-linecap="round"/><path d="M14 12h1.6a1.4 1.4 0 011.4 1.4V17a1.5 1.5 0 003 0v-5.2l-2.2-2.3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    { icon: 'ic-ins', t: '保险管理',  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 2.6V12c0 4.6-3 7.6-7 9-4-1.4-7-4.4-7-9V5.6L12 3z" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.8 12l2.2 2.2 4.2-4.4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    { icon: 'ic-year', t: '年检管理',  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.5" stroke-width="1.7"/><path d="M8 3v4M16 3v4M3.5 10h17" stroke-width="1.7" stroke-linecap="round"/><path d="M9 15.5l2.2 2.2L15.5 13" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    { icon: 'ic-mt', t: '维修保养',  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5a4.5 4.5 0 016-5.6L17 4.4l1.6 1.6 3.5-3.5a4.5 4.5 0 01-6.2 5.9L8.5 15.5a1.6 1.6 0 01-2.3 0l-.2-.2a1.6 1.6 0 010-2.3l7.4-7.4z" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 20l-4.6 1.8L3 21.6 5 16.5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    { icon: 'ic-abn', t: '车辆异常档案', svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3.5L21 20H3L12 3.5z" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9.5v4.5M12 17h.01" stroke-width="1.7" stroke-linecap="round"/></svg>' },
+    { icon: 'ic-log', t: '车辆使用日志', svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4" width="17" height="17" rx="2.5" stroke-width="1.7"/><path d="M8 2.5v3M16 2.5v3M3.5 9h17M8 13.5h4M8 17h7" stroke-width="1.7" stroke-linecap="round"/></svg>' }
+  ];
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 1600);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
+
+  function findVehicle(plate) {
+    for (var i = 0; i < VEHICLES.length; i++) { if (VEHICLES[i].plate === plate) { return VEHICLES[i]; } }
+    return null;
+  }
+
+  /* ===== 保险信息（后台维护 · 仅查看）：每车一份，zp_insurance_info ===== */
+  var INS_KEY = 'zp_insurance_info';
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function insLoad() {
+    try { var raw = localStorage.getItem(INS_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function insSave(a) { localStorage.setItem(INS_KEY, JSON.stringify(a)); }
+  /* 相对今天偏移 o 天的日期 YYYY-MM-DD（演示数据用） */
+  function off(o) {
+    var d = new Date();
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + o);
+    return t.getFullYear() + '-' + p2(t.getMonth() + 1) + '-' + p2(t.getDate());
+  }
+  /* 保单附件占位图（A4 保单扫描件示意） */
+  function docImg(k) {
+    var P = [
+      { band: '#014DB2', line: '#C9D9F2' },
+      { band: '#047857', line: '#BFE9D8' },
+      { band: '#B45309', line: '#F3DFC2' }
+    ];
+    var c = P[k % 3];
+    var rows = '';
+    for (var i = 0; i < 5; i++) {
+      var w = 150 + (i * 17) % 55;
+      rows += "<rect x='92' y='" + (124 + i * 42) + "' width='" + w + "' height='8' rx='4' fill='" + c.line + "'/>" +
+              "<rect x='26' y='" + (120 + i * 42) + "' width='56' height='16' rx='8' fill='" + c.band + "' opacity='.07'/>";
+    }
+    return 'data:image/svg+xml,' + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='440'>" +
+      "<rect width='320' height='440' rx='14' fill='#fff'/>" +
+      "<path d='M0 14a14 14 0 0 1 14-14h292a14 14 0 0 1 14 14v84H0z' fill='" + c.band + "'/>" +
+      "<rect x='26' y='38' width='110' height='16' rx='8' fill='#fff' opacity='.95'/>" +
+      "<rect x='26' y='64' width='170' height='9' rx='4.5' fill='#fff' opacity='.55'/>" +
+      "<circle cx='258' cy='62' r='26' fill='#fff' opacity='.92'/>" +
+      "<path d='M248 62l7 7 13-15' stroke='" + c.band + "' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/>" +
+      rows +
+      "<circle cx='74' cy='352' r='30' fill='none' stroke='" + c.band + "' opacity='.35' stroke-width='2'/>" +
+      "<path d='M64 352l7 7 12-14' stroke='" + c.band + "' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none' opacity='.85'/>" +
+      "</svg>");
+  }
+  /* 演示数据：与车辆列表 6 车对齐，每车一份保险（4 车到期 <90 天演示倒计时） */
+  function insSeed() {
+    if (insLoad().length) return;
+    var S = [];
+    function push(plate, company, policyNo, type, dueOff, pics) {
+      var arr = [];
+      (pics || []).forEach(function (k) { arr.push(docImg(k)); });
+      S.push({ plate: plate, company: company, policyNo: policyNo, type: type,
+               expireDate: off(dueOff), photos: arr });
+    }
+    push('苏A·12345', '中国人民财产保险', 'PDAA2026320100XJG07256', '综合险', 22, [0, 1]);
+    push('苏A·23456', '中国平安财产保险', '1162206221012345678901', '商业险', 68, [1]);
+    push('苏A·34567', '中国太平洋财产保险', 'ANAH2026NJ00123456', '交强险', 300, [2, 0]);
+    push('苏A·67890', '中国太平洋财产保险', 'ACCI2026NJ00123456', '商业险', 27, [2]);
+    push('苏A·54321', '中国人寿财产保险', '2825260000123456789', '综合险', 59, [0]);
+    push('苏A·88888', '中华联合财产保险', '07712026230100012345', '交强险', 340, [1, 2]);
+    insSave(S);
+  }
+  function insOf(plate) {
+    insSeed();
+    var a = insLoad(), i;
+    for (i = 0; i < a.length; i++) { if (a[i].plate === plate) return a[i]; }
+    return null;
+  }
+  /* 到期状态：>90 在保 / ≤90 剩N天(≤30 红) / 已到期 */
+  function insSt(due) {
+    var a = String(due).split('-');
+    var d = new Date(+a[0], (+a[1] || 1) - 1, +a[2] || 1);
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var days = Math.round((d - t) / 86400000);
+    if (days < 0)  return { cls: 'exp',  txt: '已到期',  days: days };
+    if (days <= 30) return { cls: 'hot',  txt: '剩 ' + days + ' 天', days: days };
+    if (days <= 90) return { cls: 'warn', txt: '剩 ' + days + ' 天', days: days };
+    return { cls: 'ok', txt: '在保', days: days };
+  }
+  /* 「保险管理」菜单项徽章：到期不足 90 天（或已到期）才显示倒计时 */
+  function insBadgeHtml(plate) {
+    var r = insOf(plate);
+    if (!r) return '';
+    var st = insSt(r.expireDate);
+    if (st.cls === 'ok') return '';
+    return '<span class="f-s ' + st.cls + '">' +
+      (st.cls === 'exp' ? '保险已到期' : '保险剩 ' + st.days + ' 天') + '</span>';
+  }
+
+  /* ===== 年检信息（后台维护 · 仅查看）：每车一份，zp_annual_info ===== */
+  var ANN_KEY = 'zp_annual_info';
+  function annLoad() {
+    try { var raw = localStorage.getItem(ANN_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function annSave(a) { localStorage.setItem(ANN_KEY, JSON.stringify(a)); }
+  /* 演示数据：与车辆列表 6 车对齐，每车一份年检（到期 <90 天 / 已到期演示倒计时） */
+  function annSeed() {
+    if (annLoad().length) return;
+    var S = [];
+    function push(plate, inspectOff, expireOff, org, pics) {
+      var arr = [];
+      (pics || []).forEach(function (k) { arr.push(docImg(k)); });
+      S.push({ plate: plate, inspectDate: off(inspectOff), expireDate: off(expireOff), org: org, photos: arr });
+    }
+    push('苏A·12345', -305, 60, '南京苏运机动车检测站', [0, 1]);
+    push('苏A·23456', -215, 150, '南京蓝盾车辆检测中心', [2]);
+    push('苏A·34567', -277, 88, '江苏盛达机动车检测有限公司', [1, 0]);
+    push('苏A·67890', -368, -3, '南京浦口机动车检测站', [2]);
+    push('苏A·54321', -335, 30, '南京车福机动车检测有限公司', [0]);
+    push('苏A·88888', -165, 200, '南京苏运机动车检测站', [1, 2]);
+    annSave(S);
+  }
+  function annOf(plate) {
+    annSeed();
+    var a = annLoad(), i;
+    for (i = 0; i < a.length; i++) { if (a[i].plate === plate) return a[i]; }
+    return null;
+  }
+  /* 到期分级与保险一致（>90 正常 / ≤90 剩N天 / 已到期） */
+  function annSt(d) { return insSt(d); }
+  /* 「年检管理」菜单项徽章：到期不足 90 天（或已到期）才显示倒计时 */
+  function annBadgeHtml(plate) {
+    var r = annOf(plate);
+    if (!r) return '';
+    var st = annSt(r.expireDate);
+    if (st.cls === 'ok') return '';
+    return '<span class="f-s ' + st.cls + '">' +
+      (st.cls === 'exp' ? '年检已到期' : '年检剩 ' + st.days + ' 天') + '</span>';
+  }
+
+  function infoRow(k, v, cls) {
+    return '<div class="info-row"><span class="k">' + k + '</span>' +
+           '<span class="val' + (cls ? ' ' + cls : '') + '">' + (cls && cls.indexOf('st-') === 0 ? '<span class="sdot"></span>' : '') + esc(v) + '</span></div>';
+  }
+
+  function render(v) {
+    var meta = ST[v.st];
+    var body = document.getElementById('body');
+    var insBadge = insBadgeHtml(v.plate);   /* 保险到期 <90 天时「保险管理」项挂倒计时徽章 */
+    var annBadge = annBadgeHtml(v.plate);   /* 年检到期 <90 天时「年检管理」项挂倒计时徽章 */
+
+    /* 车辆头卡 */
+    var hero =
+      '<div class="v-hero">' +
+        '<span class="h-img"><img src="' + v.img + '" alt="' + esc(v.plate) + '"></span>' +
+        '<div class="h-main">' +
+          '<span class="h-plate">' + esc(v.plate) + '</span>' +
+          '<span class="h-model">' + esc(v.brand) + ' · ' + esc(v.model) + '</span>' +
+          '<span class="h-drv">当前绑定驾驶员：<b>' + esc(v.driver) + '</b></span>' +
+        '</div>' +
+      '</div>';
+
+    /* 基础信息 */
+    var info =
+      '<div class="v-card">' +
+        '<div class="sec-tt">基础信息</div>' +
+        '<div class="info-list">' +
+          infoRow('车牌号', v.plate, 'blue') +
+          infoRow('品牌', v.brand) +
+          infoRow('型号', v.model) +
+          infoRow('VIN', v.vin, 'vin') +
+          infoRow('发动机号', v.engine) +
+          infoRow('购置日期', v.buyDate) +
+          infoRow('所属部门', v.dept) +
+          infoRow('车辆维保状态', meta.label, meta.valCls) +
+        '</div>' +
+      '</div>';
+
+    /* 功能入口 */
+    var fnHtml = '';
+    FN.forEach(function (f, i) {
+      fnHtml +=
+        '<div class="fn-item" onclick="openFn(' + i + ')">' +
+          '<span class="f-ic ' + f.icon + '">' + f.svg + '</span>' +
+          '<span class="f-name"><span class="f-t">' + f.t + '</span>' + (i === 1 ? insBadge : '') + (i === 2 ? annBadge : '') + '</span>' +
+          '<span class="f-arw"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="#C3CBD8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+        '</div>';
+    });
+    var fnCard =
+      '<div class="v-card">' +
+        '<div class="sec-tt">功能服务</div>' +
+        '<div class="fn-list">' + fnHtml + '</div>' +
+      '</div>';
+
+    body.innerHTML = hero + info + fnCard;
+  }
+
+  function openFn(i) {
+    if (i === 0) {
+      /* 加油记录：跳转该车加油记录列表 */
+      location.href = 'fuel-records.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    if (i === 1) {
+      /* 保险管理：查看该车保险信息（后台管理台维护，驾驶员仅可查看） */
+      location.href = 'insurance-view.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    if (i === 2) {
+      /* 年检管理：查看该车年检信息（后台管理台维护，驾驶员仅可查看） */
+      location.href = 'annual-view.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    if (i === 3) {
+      /* 维修保养：进入该车维修保养记录（驾驶员可增删改自己的记录） */
+      location.href = 'maintain-records.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    if (i === 4) {
+      /* 车辆异常档案：该车工作记录中 车辆检查 / 异常上报 / 结束里程 存在异常的数据记录（只读） */
+      location.href = 'vehicle-abn.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    if (i === 5) {
+      /* 车辆使用日志：该车全部驾驶员的历史行程（只读台账，行程来自用车工作记录） */
+      location.href = 'trip-log.html?plate=' + encodeURIComponent(qs('plate'));
+      return;
+    }
+    toast('「' + FN[i].t + '」建设中，敬请期待');
+  }
+
+  function goBack() {
+    /* 车辆详情由车辆列表(vehicles.html)点击进入：直接返回车辆列表，不依赖历史栈 */
+    location.href = 'vehicles.html';
+  }
+
+  (function init() {
+    var plate = qs('plate');
+    var v = findVehicle(plate);
+    if (!v) {
+      toast('未找到该车辆');
+      setTimeout(goBack, 1200);
+      return;
+    }
+    render(v);
+  })();
+</script>
+
+</body>
+</html>

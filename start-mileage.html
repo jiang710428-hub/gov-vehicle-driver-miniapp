@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公务用车驾驶员端 · 起始里程</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-2: #0A5FD4;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --faint: #9AA5B5;
+    --green: #10B981;
+    --green-dark: #047857;
+    --green-bg: #ECFDF5;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --line: #EEF0F5;
+    --blue-bg: #EFF6FF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 12px;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  /* 手机外框 */
+  .phone {
+    width: 375px; max-width: 100%; height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative; overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  /* 状态栏 */
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  /* 内容 */
+  .sm-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .sm-content::-webkit-scrollbar { display: none; }
+  .sm-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid #EEF0F5;
+  }
+  .sm-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .sm-nav .back-btn:active { transform: scale(0.9); }
+  .sm-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+  .sm-body { flex: 1; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* 步骤进度 */
+  .step-head {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .step-head .snum {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2); color: #fff;
+    font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+  .step-head .stxt { flex: 1; min-width: 0; }
+  .step-head .stxt .t { font-size: 14px; font-weight: 700; }
+  .step-head .stxt .s { font-size: 11px; color: var(--muted); }
+  .step-bar { width: 84px; height: 6px; border-radius: 3px; background: #E5EAF3; overflow: hidden; flex-shrink: 0; }
+  .step-bar > span { display: block; height: 100%; width: 57%; border-radius: 3px; background: linear-gradient(90deg, #0A5FD4, #4C8DF0); }
+
+  /* 状态徽章 */
+  .status-badge {
+    font-size: 11.5px; font-weight: 600; border-radius: 100px; padding: 3px 9px;
+    border: 1px solid transparent;
+  }
+  .status-badge.ok { color: var(--green-dark); background: var(--green-bg); border-color: #A7F3D0; }
+  .status-badge.pending { color: var(--amber); background: #FFFBEB; border-color: #FDE68A; }
+  .status-badge.err { color: #B91C1C; background: #FEF2F2; border-color: #FECACA; }
+
+  /* 卡片 */
+  .sm-card {
+    background: #fff; border-radius: 16px; padding: 16px;
+    box-shadow: 0 6px 18px rgba(15, 42, 86, 0.06);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .card-head .h3 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .card-head .h3 .ico {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 仪表盘拍摄区 */
+  .dash-shot {
+    border-radius: 14px; height: 158px; background: #F0F2F7; overflow: hidden;
+    position: relative; cursor: pointer; border: 1.5px dashed #CBD5E1;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .2s, transform .15s;
+  }
+  .dash-shot:active { transform: scale(0.99); }
+  .dash-shot.has { border-style: solid; border-color: #C6D2E4; }
+  .dash-shot .ph {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted);
+  }
+  .dash-shot .ph .cam-box {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: linear-gradient(135deg, #EFF6FF, #DCECFB); border: 1px solid #D6E6FA;
+    box-shadow: 0 4px 12px rgba(15,42,86,.10);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dash-shot .ph .txt { font-size: 13px; font-weight: 600; color: var(--sub); }
+  .dash-shot .ph .tip { font-size: 11px; color: var(--faint); }
+  .dash-shot img { width: 100%; height: 100%; object-fit: cover; display: none; }
+  .dash-shot .retake {
+    position: absolute; right: 8px; top: 8px; display: none;
+    padding: 5px 12px; border-radius: 100px; border: none; cursor: pointer;
+    background: rgba(255,255,255,.92); color: #374151; font-size: 11.5px; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,.16);
+  }
+  .dash-shot .retake.show { display: block; }
+
+  /* 上次结束里程展示 */
+  .last-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--blue-bg); border: 1px solid #D6E6FA; border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .last-row .pin {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 8px rgba(15,42,86,.08);
+  }
+  .last-row .txt { flex: 1; min-width: 0; }
+  .last-row .lbl { font-size: 11px; color: var(--sub); letter-spacing: .5px; }
+  .last-row .val {
+    font-size: 19px; font-weight: 800; color: var(--primary); margin-top: 2px;
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .last-row .val .unit { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .last-row .src { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+  /* 起始里程输入 */
+  /* km 单位内嵌于输入框右侧 */
+  .mile-input-wrap { position: relative; width: 100%; }
+  .mile-input-wrap .unit-box {
+    position: absolute; top: 50%; right: 16px; transform: translateY(-50%);
+    font-size: 14px; font-weight: 700; color: var(--sub); pointer-events: none;
+  }
+  .mile-input {
+    width: 100%; height: 48px; border-radius: 12px; border: 1.5px solid #E2E8F0;
+    background: #F5F7FA; padding: 0 50px 0 16px;
+    font-size: 21px; font-weight: 800; color: var(--text);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+    outline: none; transition: border-color .2s, background .2s, box-shadow .2s;
+    box-sizing: border-box;
+  }
+  .mile-input::-webkit-outer-spin-button,
+  .mile-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .mile-input[type=number] { -moz-appearance: textfield; }
+  .mile-input::placeholder { font-size: 13px; font-weight: 500; color: var(--faint); font-family: "Sarasa Gothic SC", sans-serif; }
+  .mile-input:focus {
+    border-color: var(--primary); background: #fff;
+    box-shadow: 0 0 0 3px rgba(1, 77, 178, .12);
+  }
+  .mile-input.warn { border-color: #FCA5A5; background: #FFF8F8; }
+
+  .input-tip { font-size: 11px; color: var(--faint); margin-top: 8px; line-height: 1.6; }
+
+  /* 差额与预警 */
+  .diff-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    border-radius: 12px; padding: 11px 14px;
+    background: #F8FAFC; border: 1px solid #E5E9F0;
+    font-size: 12.5px;
+  }
+  .diff-bar .d-l { color: var(--sub); }
+  .diff-bar .d-v {
+    font-weight: 800; font-size: 15px; color: var(--green-dark);
+    font-family: Inter, "Sarasa Gothic SC", sans-serif;
+  }
+  .diff-bar.warn { background: #FFF8F8; border-color: #FECACA; }
+  .diff-bar.warn .d-l { color: #991B1B; }
+  .diff-bar.warn .d-v { color: #B91C1C; }
+
+  .alert-box {
+    display: none; gap: 10px; align-items: flex-start;
+    background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px;
+    padding: 12px 13px;
+  }
+  .alert-box.show { display: flex; }
+  .alert-box .a-ico {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    background: #FEE2E2; display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .alert-box .a-txt { flex: 1; min-width: 0; }
+  .alert-box .a-title { font-size: 13px; font-weight: 700; color: #B91C1C; }
+  .alert-box .a-desc { font-size: 11.5px; color: #B91C1C; line-height: 1.6; margin-top: 3px; }
+
+  /* 提交按钮 */
+  .submit-btn {
+    margin-top: 4px; height: 48px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    box-shadow: 0 10px 22px rgba(1, 77, 178, 0.32);
+    transition: transform .15s, opacity .2s;
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled {
+    background: #C9D4E3; box-shadow: none; cursor: not-allowed;
+  }
+  .submit-tip {
+    text-align: center; font-size: 11px; color: var(--faint); margin-top: 8px;
+  }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%) translateY(16px);
+    background: rgba(10, 22, 40, .88); color: #fff;
+    padding: 9px 18px; border-radius: 100px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="page">
+    <div class="statusbar">
+      <span class="time">10:24</span>
+      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+
+    <div class="sm-content">
+      <div class="sm-nav">
+        <button class="back-btn" onclick="location.href='home.html'" aria-label="返回">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#0A1628" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="title">起始里程</span>
+      </div>
+
+      <div class="sm-body">
+        <!-- 步骤进度 -->
+        <div class="step-head">
+          <span class="snum">4</span>
+          <div class="stxt">
+            <div class="t">起始里程</div>
+            <div class="s">第 4 步 · 共 7 步</div>
+          </div>
+          <div class="step-bar"><span></span></div>
+        </div>
+
+        <!-- 仪表盘照片 -->
+        <div class="sm-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#014DB2" stroke-width="1.7"/><path d="M12 12l4.5-3" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="#014DB2"/></svg>
+              </span>
+              仪表盘照片
+            </span>
+            <span class="status-badge pending" id="dashStatus">待拍摄</span>
+          </div>
+          <div class="dash-shot" id="dashShot" onclick="document.getElementById('dashFile').click()">
+            <div class="ph">
+              <div class="cam-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="#014DB2" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#014DB2" stroke-width="1.6"/></svg>
+              </div>
+              <span class="txt">点击拍摄仪表盘照片</span>
+              <span class="tip">需清晰显示总里程数 · 仅支持相机拍摄</span>
+            </div>
+            <img id="dashImg" alt="仪表盘照片">
+            <button class="retake" id="dashRetake" onclick="event.stopPropagation();resetDash()">重新拍摄</button>
+          </div>
+          <input type="file" id="dashFile" accept="image/*" capture="environment" style="display:none" onchange="onDash(this)">
+        </div>
+
+        <!-- 上次结束里程 -->
+        <div class="sm-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l2.5 2.5" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" stroke="#014DB2" stroke-width="1.7"/></svg>
+              </span>
+              上次行程结束里程
+            </span>
+            <span class="status-badge ok">已读取</span>
+          </div>
+          <div class="last-row">
+            <div class="pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 17h16M6 17V9h2.5v8M11 17V6h2.5v11M16 17v-6h2.5v6" stroke="#014DB2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="txt">
+              <div class="lbl">苏A·12345 · 上次行程结束里程数</div>
+              <div class="val">12526<span class="unit">km</span></div>
+              <div class="src">来源：系统自动读取 · 2026-09-01 18:05</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 填写起始里程 -->
+        <div class="sm-card">
+          <div class="card-head">
+            <span class="h3">
+              <span class="ico">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h16M7 16l9-9M7 7h.01M11 7h.01M15 7h.01M7 11h.01M7 15h.01" stroke="#014DB2" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              填写本次起始里程
+            </span>
+          </div>
+
+          <div class="mile-input-wrap">
+            <input class="mile-input" id="mileInput" type="number" inputmode="decimal" min="0" step="1"
+                   placeholder="请输入本次起始里程数" oninput="onMileInput()">
+            <span class="unit-box">km</span>
+          </div>
+          <div class="input-tip">请对照仪表盘照片上的总里程数填写，支持整数。</div>
+
+          <div style="height:12px"></div>
+
+          <div class="diff-bar" id="diffBar">
+            <span class="d-l" id="diffLabel">与上次结束里程差额</span>
+            <span class="d-v" id="diffVal">--</span>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="alert-box" id="alertBox">
+            <div class="a-ico">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 6v7" stroke="#B91C1C" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.4" fill="#B91C1C"/></svg>
+            </div>
+            <div class="a-txt">
+              <div class="a-title">里程差额预警</div>
+              <div class="a-desc" id="alertDesc">本次起始里程与上次行程结束里程差额超过 50 km，请核实仪表盘读数是否准确；如确认无误，可继续提交。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提交 -->
+        <button class="submit-btn" id="submitBtn" disabled onclick="submitMile()">确认起始里程</button>
+        <div class="submit-tip">需完成仪表盘照片拍摄并填写起始里程后方可提交</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+  var LAST_END = 12526;   /* 上次行程结束里程 */
+  var WARN_GAP = 50;      /* 预警阈值 */
+  var dashPhoto = '';
+
+  function toast(msg) {
+    var t = document.getElementById('toastEl');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._tm);
+    t._tm = setTimeout(function () { t.classList.remove('show'); }, 2000);
+  }
+
+  /* 仪表盘拍照 */
+  function onDash(input) {
+    var f = input.files && input.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      dashPhoto = e.target.result;
+      var img = document.getElementById('dashImg');
+      img.src = dashPhoto;
+      img.style.display = 'block';
+      var shot = document.getElementById('dashShot');
+      shot.classList.add('has');
+      shot.querySelector('.ph').style.display = 'none';
+      document.getElementById('dashRetake').classList.add('show');
+      document.getElementById('dashStatus').textContent = '已拍摄';
+      document.getElementById('dashStatus').className = 'status-badge ok';
+      updateState();
+    };
+    reader.readAsDataURL(f);
+  }
+
+  function resetDash() {
+    dashPhoto = '';
+    var img = document.getElementById('dashImg');
+    img.style.display = 'none';
+    img.removeAttribute('src');
+    var shot = document.getElementById('dashShot');
+    shot.classList.remove('has');
+    shot.querySelector('.ph').style.display = '';
+    document.getElementById('dashRetake').classList.remove('show');
+    document.getElementById('dashFile').value = '';
+    document.getElementById('dashStatus').textContent = '待拍摄';
+    document.getElementById('dashStatus').className = 'status-badge pending';
+    updateState();
+  }
+
+  /* 起始里程输入 → 差额计算与预警 */
+  function onMileInput() {
+    var input = document.getElementById('mileInput');
+    var v = parseFloat(input.value);
+    var diffBar = document.getElementById('diffBar');
+    var diffVal = document.getElementById('diffVal');
+    var alertBox = document.getElementById('alertBox');
+    var desc = document.getElementById('alertDesc');
+    var inputOk = !isNaN(v) && v >= 0;
+
+    if (!inputOk) {
+      input.classList.remove('warn');
+      diffBar.classList.remove('warn');
+      diffVal.textContent = '--';
+      alertBox.classList.remove('show');
+      updateState();
+      return;
+    }
+
+    var diff = v - LAST_END;
+    var abs = Math.abs(diff);
+    diffVal.textContent = (diff >= 0 ? '+' : '') + diff + ' km';
+
+    if (abs > WARN_GAP) {
+      input.classList.add('warn');
+      diffBar.classList.add('warn');
+      diffVal.textContent = (diff >= 0 ? '+' : '') + diff + ' km ⚠';
+      alertBox.classList.add('show');
+      desc.textContent = '本次起始里程与上次行程结束里程差额 ' + abs + ' km，超过 50 km，请核实仪表盘读数是否准确；如确认无误，可继续提交。';
+    } else {
+      input.classList.remove('warn');
+      diffBar.classList.remove('warn');
+      alertBox.classList.remove('show');
+    }
+    updateState();
+  }
+
+  function updateState() {
+    var v = parseFloat(document.getElementById('mileInput').value);
+    var ok = !!dashPhoto && !isNaN(v) && v >= 0;
+    document.getElementById('submitBtn').disabled = !ok;
+  }
+
+  function submitMile() {
+    var v = parseFloat(document.getElementById('mileInput').value);
+    if (!dashPhoto) { toast('请先拍摄仪表盘照片'); return; }
+    if (isNaN(v) || v < 0) { toast('请填写起始里程'); return; }
+    var abs = Math.abs(v - LAST_END);
+    if (abs > WARN_GAP) {
+      toast('已提交（差额预警已上报后台核实）');
+    } else {
+      toast('起始里程已提交：' + v + ' km');
+    }
+    setTimeout(function () { location.href = 'home.html'; }, 1400);
+  }
+</script>
+</body>
+</html>

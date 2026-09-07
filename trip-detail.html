@@ -535,14 +535,13 @@
       '<div class="circles" style="margin-top:7px">' + circles + '</div>' +
       '<div class="row" style="margin-top:2px"><span class="k" style="font-size:11px">环视检查结果</span>' +
         (cirAbn ? '<span class="st bad">存在异常</span>' : '<span class="st ok">全部正常</span>') + '</div>' +
-      (!cirAbn ? '<span class="sec-lab" style="margin-top:6px">环视照片（6 张 · 一方位一帧）</span>' +
-        '<div class="shots">' + surroundShots(r.chkExPos) + '</div>' : '');
+      '<span class="sec-lab" style="margin-top:6px">环视照片（6 张 · 一方位一帧）</span>' +
+      '<div class="shots">' + surroundShots(r.chkExPos) + '</div>';
     if (cirAbn) {
       chkBody += '<div class="warn-box">' +
         '<div class="wb-t"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L21 19.5H3L12 4.5z" stroke="#EF4444" stroke-width="2" stroke-linejoin="round"/><path d="M12 10.5v4.2" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/></svg>360° 环视检查异常</div>' +
         row('异常方位', '<span style="color:#B91C1C;font-weight:800">' + r.chkExPos + '</span>') +
         row('异常分类', r.chkExCat) +
-        '<span class="sec-lab" style="margin-top:4px">异常照片</span><div class="shots">' + shotBad(r.chkExPhotos) + '</div>' +
         '<div class="wb-d">' + r.chkExDesc + '</div>' +
       '</div>';
     }
@@ -607,14 +606,13 @@
       '<span class="sec-lab">还车 360° 环视检查（6 方位）</span>' +
       '<div class="circles" style="margin-top:7px">' + rcircles + '</div>' +
       '<div class="row" style="margin-top:2px"><span class="k">还车检查结果</span>' + (rtBad ? '<span class="st bad">异常</span>' : '<span class="st ok">正常</span>') + '</div>' +
-      (!rtBad ? '<span class="sec-lab" style="margin-top:6px">还车环视照片（6 张 · 一方位一帧）</span>' +
-        '<div class="shots">' + surroundShots(r.rtExPos) + '</div>' : '');
+      '<span class="sec-lab" style="margin-top:6px">还车环视照片（6 张 · 一方位一帧）</span>' +
+      '<div class="shots">' + surroundShots(r.rtExPos) + '</div>';
     if (rtBad) {
       rtBody += '<div class="warn-box">' +
         '<div class="wb-t"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L21 19.5H3L12 4.5z" stroke="#EF4444" stroke-width="2" stroke-linejoin="round"/><path d="M12 10.5v4.2" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/></svg>还车 360° 环视检查异常</div>' +
         row('异常方位', '<span style="color:#B91C1C;font-weight:800">' + r.rtExPos + '</span>') +
         row('异常分类', r.rtExCat) +
-        '<span class="sec-lab" style="margin-top:4px">异常照片</span><div class="shots">' + shotBad(r.rtExPhotos || 1) + '</div>' +
         '<div class="wb-d">' + r.rtExDesc + '</div>' +
       '</div>';
     }

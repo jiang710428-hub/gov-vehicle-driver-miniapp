@@ -423,6 +423,14 @@
     }
     return h;
   }
+  /* 360° 环视检查 6 方位照片（异常方位为 .shot.bad，其余 .shot.done） */
+  function surroundShots(abnPos) {
+    var cam = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.8-2.4h6.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="1.5"/></svg>';
+    return POS.map(function (p) {
+      var bad = !!(abnPos && p === abnPos);
+      return '<div class="shot ' + (bad ? 'bad' : 'done') + '">' + cam + '<span class="t">' + p + '</span></div>';
+    }).join('');
+  }
   function row(k, v) { return '<div class="row"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
   function numRow(k, v, u) { return '<div class="row"><span class="k">' + k + '</span><span class="v num">' + v + (u ? '<span class="u">' + u + '</span>' : '') + '</span></div>'; }
   function stepHead(no, title, t) {
@@ -526,7 +534,9 @@
       '<span class="sec-lab">车辆 360° 环视检查（6 方位）</span>' +
       '<div class="circles" style="margin-top:7px">' + circles + '</div>' +
       '<div class="row" style="margin-top:2px"><span class="k" style="font-size:11px">环视检查结果</span>' +
-        (cirAbn ? '<span class="st bad">存在异常</span>' : '<span class="st ok">全部正常</span>') + '</div>';
+        (cirAbn ? '<span class="st bad">存在异常</span>' : '<span class="st ok">全部正常</span>') + '</div>' +
+      '<span class="sec-lab" style="margin-top:6px">环视照片（6 张 · 一方位一帧）</span>' +
+      '<div class="shots">' + surroundShots(r.chkExPos) + '</div>';
     if (cirAbn) {
       chkBody += '<div class="warn-box">' +
         '<div class="wb-t"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L21 19.5H3L12 4.5z" stroke="#EF4444" stroke-width="2" stroke-linejoin="round"/><path d="M12 10.5v4.2" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/></svg>360° 环视检查异常</div>' +
@@ -596,7 +606,9 @@
       numRow('本次用车里程', fmt(r.eKm - r.sKm), 'km') +
       '<span class="sec-lab">还车 360° 环视检查（6 方位）</span>' +
       '<div class="circles" style="margin-top:7px">' + rcircles + '</div>' +
-      '<div class="row" style="margin-top:2px"><span class="k">还车检查结果</span>' + (rtBad ? '<span class="st bad">异常</span>' : '<span class="st ok">正常</span>') + '</div>';
+      '<div class="row" style="margin-top:2px"><span class="k">还车检查结果</span>' + (rtBad ? '<span class="st bad">异常</span>' : '<span class="st ok">正常</span>') + '</div>' +
+      '<span class="sec-lab" style="margin-top:6px">还车环视照片（6 张 · 一方位一帧）</span>' +
+      '<div class="shots">' + surroundShots(r.rtExPos) + '</div>';
     if (rtBad) {
       rtBody += '<div class="warn-box">' +
         '<div class="wb-t"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L21 19.5H3L12 4.5z" stroke="#EF4444" stroke-width="2" stroke-linejoin="round"/><path d="M12 10.5v4.2" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/></svg>还车 360° 环视检查异常</div>' +

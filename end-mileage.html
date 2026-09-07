@@ -486,18 +486,9 @@
             '</select>' +
           '</div>' +
           '<div class="ab-field">' +
-            '<div class="ab-label">异常部位照片<span class="req">*</span></div>' +
-            '<div class="ab-up">' +
-              '<div class="ab-up-btn" onclick="takePhoto(\'cirab\', \'' + c.key + '\')">' +
-                '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#B91C1C" stroke-width="2" stroke-linecap="round"/></svg>' +
-              '</div>' +
-              '<div class="ab-up-img" id="cirAbnImgBox-' + c.key + '"><img id="cirAbnImg-' + c.key + '" alt="异常照片"></div>' +
-              '<div class="ab-up-tip">仅支持相机拍摄<br>近景拍摄异常部位</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="ab-field">' +
             '<div class="ab-label">文字说明<span class="req">*</span></div>' +
             '<textarea class="ab-text" id="cirDesc-' + c.key + '" rows="2" placeholder="请描述该方位异常情况（必填）" oninput="cirState[\'' + c.key + '\'].desc=this.value"></textarea>' +
+            '<div class="ab-up-tip" style="margin-top:6px">环视异常仅需选择分类 + 填写说明，无需额外上传异常部位照片</div>' +
           '</div>' +
         '</div>';
       grid.appendChild(cell);
@@ -603,7 +594,6 @@
       var ck = CIR[k], cs = cirState[ck.key];
       if (cs.abn) {
         if (!cs.cat) { toast('环视「' + ck.name + '」请选择异常分类'); return; }
-        if (!cs.aphoto) { toast('环视「' + ck.name + '」请上传异常部位照片'); return; }
         if (!cs.desc.trim()) { toast('环视「' + ck.name + '」请填写异常说明'); return; }
       }
     }

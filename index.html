@@ -215,7 +215,7 @@
         <span class="checkbox off" id="agree-box" onclick="toggleAgree()">
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4.5l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
-        <span>已阅读并同意</span><a href="agreement.html">《用户协议》</a>
+        <span>已阅读并同意</span><a href="agreement.html">《用户协议》</a><span>和</span><a href="privacy.html">《隐私协议》</a>
       </div>
     </div>
   </div>
@@ -253,7 +253,7 @@
 
     if (!phone || !pwd) { toast('请输入手机号和密码'); return false; }
     if (!/^1\d{10}$/.test(phone)) { toast('手机号格式不正确'); return false; }
-    if (!agreed) { toast('请先勾选同意《用户协议》'); return false; }
+    if (!agreed) { toast('请先勾选同意《用户协议》和《隐私协议》'); return false; }
 
     btn.disabled = true;
     btn.textContent = '登录中...';

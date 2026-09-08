@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宁公车驾驶员端 · 隐私协议</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #014DB2;
+    --primary-deep: #001645;
+    --text: #0A1628;
+    --sub: #6B7280;
+    --muted: #8A94A6;
+    --bg: #F9F9F9;
+    --card: #FFFFFF;
+  }
+
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 12px;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  .phone {
+    width: 375px;
+    max-width: 100%;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(1, 77, 178, 0.28), 0 0 0 10px #1c1c1e, 0 0 0 12px #3a3a3c;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
+  }
+
+  .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+  .statusbar {
+    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; z-index: 50;
+  }
+  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
+  .capsule {
+    width: 88px; height: 28px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .capsule .dot:nth-child(1) { background: #0A1628; }
+  .capsule .dot:nth-child(2) { background: #9CA3AF; }
+  .capsule .dot:nth-child(3) { background: #E3E7EB; }
+
+  .agree-content {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .agree-content::-webkit-scrollbar { display: none; }
+  .agree-nav {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 12px; position: relative;
+    border-bottom: 1px solid #EEF0F5;
+    background: #fff;
+  }
+  .agree-nav .back-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #F0F2F7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: transform .15s;
+  }
+  .agree-nav .back-btn:active { transform: scale(0.9); }
+  .agree-nav .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 700;
+  }
+  .agree-body { flex: 1; padding: 0 16px; }
+
+  .doc { padding: 16px 4px 40px; }
+  .doc-head { padding: 6px 0 14px; border-bottom: 1px solid #EEF0F5; margin-bottom: 14px; }
+  .doc-head h3 { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: .3px; }
+  .doc-head .ver { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .doc .lead {
+    font-size: 13px; line-height: 1.8; color: var(--sub);
+    background: #F4F6FA; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;
+  }
+  .doc h4 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14.5px; font-weight: 700; color: var(--text);
+    margin: 18px 0 8px;
+  }
+  .doc h4 .no {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px;
+    background: linear-gradient(135deg, #0A5FD4, #014DB2);
+    color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .doc p { font-size: 13px; line-height: 1.85; color: #374151; margin-bottom: 6px; }
+  .doc p b { color: var(--text); }
+  .doc ol { padding-left: 20px; margin-bottom: 6px; }
+  .doc ol li { font-size: 13px; line-height: 1.8; color: #374151; margin-bottom: 4px; }
+  .doc table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; }
+  .doc table th, .doc table td {
+    font-size: 12px; line-height: 1.6; text-align: left;
+    border: 1px solid #E5E9F0; padding: 8px 10px; vertical-align: top;
+  }
+  .doc table th { background: #F4F6FA; color: var(--text); font-weight: 600; white-space: nowrap; }
+  .doc table td { color: #374151; }
+  .doc table td:first-child { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .doc .foot {
+    margin-top: 20px; padding-top: 14px; border-top: 1px solid #EEF0F5;
+    font-size: 12px; color: var(--muted); line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <div class="page" id="page-privacy">
+    <div class="statusbar">
+      <span class="time">9:41</span>
+      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+
+    <div class="agree-content">
+      <div class="agree-nav">
+        <button class="back-btn" onclick="location.href='index.html'">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3.5L5.5 9l5.5 5.5" stroke="#0A1628" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="title">隐私协议</span>
+      </div>
+      <div class="agree-body">
+        <div class="doc">
+          <div class="doc-head">
+            <h3>宁公车驾驶员端隐私协议</h3>
+            <p class="ver">版本 V1.0 · 生效日期 2026-09-08</p>
+          </div>
+
+          <p class="lead">本单位高度重视个人信息保护。本协议用于说明宁公车驾驶员端（以下简称"本平台"）收集哪些信息、如何使用、存储与保护这些信息，以及您享有的权利。请您仔细阅读，并结合《用户协议》一并理解。</p>
+
+          <h4><span class="no">一</span>适用范围</h4>
+          <ol>
+            <li>本协议适用于您使用本平台（含配套的宁公车管理平台管理后台中涉及您信息的处理活动）过程中的个人信息处理。</li>
+            <li>适用对象为经本单位授权使用本平台的内部人员；本平台不面向社会公众提供服务。</li>
+          </ol>
+
+          <h4><span class="no">二</span>我们收集的信息</h4>
+          <p>为实现公务用车管理功能，我们收集以下信息：</p>
+          <table>
+            <tr><th>类别</th><th>具体内容</th><th>来源</th></tr>
+            <tr><td>账号与身份</td><td>姓名、工号、所属部门、手机号（登录账号）、登录密码（加密存储）、头像照片</td><td>管理后台录入 / 您上传</td></tr>
+            <tr><td>驾驶资质</td><td>驾驶证号、准驾车型、初次领证日期、证件有效期</td><td>管理后台录入</td></tr>
+            <tr><td>出勤信息</td><td>上下班打卡时间、打卡状态</td><td>您打卡产生</td></tr>
+            <tr><td>用车信息</td><td>派单任务、用车时段、起始/结束里程读数、接车与还车 360° 环视照片（六个方位）、异常上报内容与照片</td><td>您在用车流程中填报</td></tr>
+            <tr><td>加油维保</td><td>加油日期、地点、金额、油卡余额、凭证照片；保养维修项目、费用、现场照片</td><td>您主动上报</td></tr>
+            <tr><td>车辆合规</td><td>所驾车辆的保险、年检信息及到期日期</td><td>管理后台维护（您只读查看）</td></tr>
+          </table>
+          <p>上述信息均在您履行驾驶岗位职责过程中产生，属于履职数据。</p>
+
+          <h4><span class="no">三</span>信息的使用</h4>
+          <ol>
+            <li><b>调度与派单：</b>向对应驾驶员推送派单任务、核对任务状态。</li>
+            <li><b>出勤管理：</b>统计出勤情况，用于排班与考核。</li>
+            <li><b>车辆核查：</b>通过接车/还车环视照片对比与里程衔接校验，核查车辆状况与用车合规性（如里程异常、车况异常预警）。</li>
+            <li><b>费用核对：</b>加油、维修保养记录及凭证用于费用核对与审计。</li>
+            <li><b>合规提醒：</b>展示所驾车辆保险、年检到期信息，保障车辆合规上路。</li>
+            <li><b>档案留存：</b>工作记录与照片按公务用车档案管理要求留存备查。</li>
+          </ol>
+          <p>我们不会将您的信息用于与公务用车管理无关的任何用途。</p>
+
+          <h4><span class="no">四</span>信息的存储与保护</h4>
+          <ol>
+            <li><b>存储位置：</b>信息存储于本单位内部系统（当前演示环境存储于您设备浏览器本地），管理后台仅限经授权的管理人员访问。</li>
+            <li><b>保存期限：</b>工作记录、照片等档案信息按本单位公务用车档案管理要求留存；账号停用后，相关信息按规定继续留存。</li>
+            <li><b>安全措施：</b>密码加密存储、登录身份校验、分级权限控制（驾驶员仅可查看本人相关数据）、数据定期备份。</li>
+            <li><b>事件处置：</b>发生或可能发生信息泄露、篡改、丢失的，我们将立即采取补救措施，并按单位要求履行告知义务。</li>
+          </ol>
+
+          <h4><span class="no">五</span>信息的共享与公开</h4>
+          <ol>
+            <li>我们<b>不会</b>向任何无关第三方出售或对外公开您的个人信息。</li>
+            <li>出于内部管理需要，您的出勤、用车、加油、维保等信息可在本单位车辆管理、财务、审计等经授权的部门范围内共享查阅。</li>
+            <li>法律法规或监管要求必须提供的除外。</li>
+          </ol>
+
+          <h4><span class="no">六</span>您的权利</h4>
+          <ol>
+            <li><b>查询与更正：</b>您可在"我的"页面查看本人信息；发现信息有误的，可向管理员申请更正（手机号作为登录账号，创建后不可自行变更，请谨慎保管）。</li>
+            <li><b>申诉与解释：</b>对系统预警、异常记录有异议的，可向车辆管理部门提出申诉，我们将在核实后予以处理与反馈。</li>
+            <li><b>停用与撤回：</b>账号停用后，平台将停止对您个人信息的持续处理；已形成的履职档案按档案管理规定留存。</li>
+            <li><b>投诉与咨询：</b>您可就个人信息处理问题向本单位车辆管理部门（综合办公室）咨询或投诉。</li>
+          </ol>
+
+          <h4><span class="no">七</span>未成年人条款</h4>
+          <p>本平台为内部办公系统，仅面向本单位成年在职人员，不面向未成年人。</p>
+
+          <h4><span class="no">八</span>协议更新</h4>
+          <ol>
+            <li>本协议可能适时更新，重大变更将在平台内公示提示；公示后您继续使用本平台的，视为接受更新后的协议。</li>
+            <li>历史版本可向车辆管理部门索取查阅。</li>
+          </ol>
+
+          <h4><span class="no">九</span>联系我们</h4>
+          <p>如对本协议或个人信息处理事宜有任何疑问、意见或建议，请联系本单位车辆管理部门（综合办公室），我们将在核实身份后及时回复。</p>
+
+          <p class="foot">本协议与《<a href="agreement.html" style="color:#014DB2;text-decoration:none;">用户协议</a>》共同构成您使用宁公车驾驶员端的完整约定。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

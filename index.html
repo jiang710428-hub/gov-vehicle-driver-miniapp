@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>公务用车驾驶员端 · 登录</title>
+<title>南京智慧新城 · 驾驶员端登录</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -22,7 +22,7 @@
   body {
     min-height: 100%;
     font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
-    background: linear-gradient(135deg, #E8EEF8 0%, #D7E2F2 50%, #C9D8EC 100%);
+    background: #E8F1FA;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -43,77 +43,72 @@
     overflow: hidden;
   }
 
-  .notch {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    width: 120px; height: 30px; background: #1c1c1e; border-radius: 18px; z-index: 100;
-  }
+  .notch, .statusbar { display: none; }
 
   .page {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
+    background: url('img/login-bg.jpg') center top / cover no-repeat;
   }
 
-  .statusbar {
-    height: 62px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 24px; z-index: 50;
-  }
-  .statusbar .time { font-size: 15px; font-weight: 600; font-family: Inter, sans-serif; }
-  .capsule {
-    width: 88px; height: 28px; border-radius: 14px; background: #fff;
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
-  }
-  .capsule .dot { width: 5px; height: 5px; border-radius: 50%; }
-  .capsule .dot:nth-child(1) { background: #0A1628; }
-  .capsule .dot:nth-child(2) { background: #9CA3AF; }
-  .capsule .dot:nth-child(3) { background: #E3E7EB; }
-
-  /* 登录页 */
-  .login-deco {
-    position: absolute; top: 0; left: 0; right: 0; height: 300px;
-    background: linear-gradient(180deg, #E1ECFC 0%, #EEF4FB 62%, rgba(238,244,251,0) 100%);
-    z-index: 0; pointer-events: none;
-  }
-  .login-deco::before {
-    content: ''; position: absolute; top: -130px; left: 50%; transform: translateX(-50%);
-    width: 440px; height: 440px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(1,77,178,.18) 0%, rgba(1,77,178,0) 68%);
-  }
-  .login-deco::after {
-    content: ''; position: absolute; top: 190px; left: -70px;
-    width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(16,185,129,.12) 0%, rgba(16,185,129,0) 70%);
-  }
   .login-content {
     flex: 1; position: relative; z-index: 1;
-    display: flex; flex-direction: column;
-    padding: 44px 30px 24px;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 112px 32px 30px;
     overflow-y: auto; scrollbar-width: none;
   }
   .login-content::-webkit-scrollbar { display: none; }
-  .brand { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .logo {
-    width: 84px; height: 84px; border-radius: 24px;
-    background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 16px 32px rgba(1, 77, 178, 0.34), inset 0 1px 0 rgba(255,255,255,.25);
+
+  .brand {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 9px;
   }
-  .app-name { font-size: 21px; font-weight: 700; letter-spacing: 1.5px; }
-  .slogan { font-size: 12px; color: var(--muted); letter-spacing: 2.5px; }
+  .logo {
+    width: 92px; height: 92px; border-radius: 24px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 14px 34px rgba(1, 77, 178, 0.22);
+  }
+  .logo img { width: 100%; height: 100%; object-fit: cover; }
+  .brand-title {
+    font-size: 29px; font-weight: 800; color: #0A1628;
+    letter-spacing: 1px; line-height: 1.1;
+    text-shadow: 0 2px 8px rgba(255,255,255,.8);
+  }
+  .brand-sub {
+    font-size: 15px; font-weight: 600; color: #0A1628;
+    letter-spacing: .6px;
+    text-shadow: 0 2px 8px rgba(255,255,255,.8);
+  }
+  .brand-badge {
+    height: 30px; line-height: 30px; padding: 0 20px; border-radius: 15px;
+    background: linear-gradient(90deg, #0A5FD4 0%, #014DB2 100%);
+    color: #fff; font-size: 14px; font-weight: 600;
+    box-shadow: 0 6px 16px rgba(1, 77, 178, 0.28);
+  }
+  .brand-tag {
+    margin-top: 5px; font-size: 12px; color: #5F6B7A; letter-spacing: 5.5px;
+    text-shadow: 0 1px 6px rgba(255,255,255,.9);
+  }
 
-  .login-spacer { height: 44px; flex: none; }
+  .form-wrap {
+    width: 100%; margin-top: 54px;
+    background: rgba(255, 255, 255, .96);
+    backdrop-filter: blur(6px);
+    border-radius: 22px;
+    padding: 22px 20px 20px;
+    box-shadow: 0 14px 38px rgba(1, 77, 178, .12);
+  }
 
-  .form { display: flex; flex-direction: column; gap: 18px; }
-  .form-field { display: flex; flex-direction: column; gap: 8px; }
-  .form-label { font-size: 13px; font-weight: 600; color: var(--sub); padding-left: 4px; }
+  .form { display: flex; flex-direction: column; gap: 14px; }
   .field {
-    height: 54px; border-radius: 12px; background: #F5F7FA;
+    height: 52px; border-radius: 14px; background: #F6F8FB;
     display: flex; align-items: center; gap: 12px; padding: 0 16px;
-    border: 1.5px solid transparent; transition: all .2s;
+    border: 1px solid #E8ECF2; transition: all .2s;
   }
   .field:focus-within {
     background: #fff; border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(1,77,178,.12), 0 6px 18px rgba(1,77,178,.08);
+    box-shadow: 0 0 0 3px rgba(1,77,178,.10), 0 6px 18px rgba(1,77,178,.08);
   }
   .field:focus-within svg * { stroke: var(--primary); }
   .field:focus-within svg rect[fill="#8A94A6"],
@@ -126,11 +121,11 @@
   .field .icon-btn { cursor: pointer; display: flex; }
 
   .login-btn {
-    height: 52px; border-radius: 26px; border: none; cursor: pointer; margin-top: 10px;
+    height: 52px; border-radius: 26px; border: none; cursor: pointer; margin-top: 18px;
     background: linear-gradient(135deg, #0A5FD4 0%, #014DB2 100%);
     color: #fff; font-size: 17px; font-weight: 600;
     font-family: inherit; letter-spacing: 8px; text-indent: 8px;
-    box-shadow: 0 12px 26px rgba(1, 77, 178, 0.34);
+    box-shadow: 0 12px 28px rgba(1, 77, 178, 0.32);
     transition: transform .15s, box-shadow .15s, opacity .2s;
   }
   .login-btn:active { transform: scale(0.97); box-shadow: 0 5px 14px rgba(1,77,178,.28); }
@@ -142,11 +137,11 @@
   }
   .agree-row a { color: var(--primary); text-decoration: none; }
   .checkbox {
-    width: 16px; height: 16px; border-radius: 4px; cursor: pointer;
+    width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
     background: var(--primary); display: flex; align-items: center; justify-content: center;
     transition: background .15s, opacity .15s;
   }
-  .checkbox.off { background: #DDE2EA; }
+  .checkbox.off { background: transparent; border: 1.5px solid #CBD5E1; }
   .checkbox.off svg { opacity: 0; }
 
   /* toast */
@@ -157,6 +152,27 @@
     transition: all .3s; white-space: nowrap; z-index: 200;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .slogan {
+    margin-top: auto; align-self: flex-start;
+    padding: 0 6px 34px;
+    font-family: "STXingkai", "KaiTi", "SimKai", "Microsoft YaHei", serif;
+    color: #1B5A9A;
+    line-height: 1.35;
+    transform: rotate(-4deg);
+    text-shadow: 0 2px 8px rgba(255,255,255,.9);
+    position: relative; z-index: 1;
+  }
+  .slogan .line1 { font-size: 26px; letter-spacing: 2px; }
+  .slogan .line2 { font-size: 26px; letter-spacing: 2px; margin-left: 22px; }
+  .slogan .underline {
+    position: absolute; left: 18px; bottom: 22px;
+    width: 136px; height: 18px;
+  }
+  .slogan .underline path {
+    fill: none; stroke: #2C8FDF; stroke-width: 1.6; stroke-linecap: round;
+    opacity: .75;
+  }
 </style>
 </head>
 <body>
@@ -165,40 +181,24 @@
   <div class="notch"></div>
 
   <div class="page" id="page-login">
-    <div class="login-deco"></div>
-    <div class="statusbar">
-      <span class="time">9:41</span>
-      <div class="capsule"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-    </div>
-
     <div class="login-content">
       <div class="brand">
         <div class="logo">
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8.5 27L11.2 20.9C11.9 19.3 13.4 18.3 15.1 18.3H28.9C30.6 18.3 32.1 19.3 32.8 20.9L35.5 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M14.5 13.7C15.1 12.2 16.5 11.2 18.1 11.2H25.9C27.5 11.2 28.9 12.2 29.5 13.7L31.2 18H12.8L14.5 13.7Z" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
-            <rect x="10.5" y="27" width="23" height="4" rx="2" fill="#FFFFFF"/>
-            <circle cx="15.5" cy="28.5" r="2.4" fill="#014DB2"/>
-            <circle cx="28.5" cy="28.5" r="2.4" fill="#014DB2"/>
-          </svg>
+          <img src="img/logo.jpg" alt="南京智慧新城">
         </div>
-        <div class="app-name">宁公车驾驶员端</div>
-        <div class="slogan">安全驾驶 · 高效出行</div>
+        <div class="brand-title">南京智慧新城</div>
+        <div class="brand-sub">公务用车一体化管理平台</div>
+        <div class="brand-badge">驾驶员端</div>
+        <div class="brand-tag">规范 · 高效 · 安全 · 智慧</div>
       </div>
 
-      <div class="login-spacer"></div>
-
-      <form class="form" id="login-form" onsubmit="return handleLogin(event)">
-        <div class="form-field">
-          <label class="form-label" for="phone">手机号</label>
+      <div class="form-wrap">
+        <form class="form" id="login-form" onsubmit="return handleLogin(event)">
           <div class="field">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.5" stroke="#8A94A6" stroke-width="1.6"/><rect x="10.2" y="18" width="3.6" height="1.4" rx="0.7" fill="#8A94A6"/></svg>
             <input type="tel" id="phone" maxlength="11" placeholder="请输入手机号" autocomplete="off">
           </div>
-        </div>
 
-        <div class="form-field">
-          <label class="form-label" for="pwd">密码</label>
           <div class="field">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5" stroke="#8A94A6" stroke-width="1.6"/><rect x="10.6" y="5.4" width="2.8" height="5.6" rx="1.4" stroke="#8A94A6" stroke-width="1.6"/><circle cx="12" cy="15.2" r="1.5" fill="#8A94A6"/></svg>
             <input type="password" id="pwd" placeholder="请输入密码" autocomplete="off">
@@ -206,16 +206,22 @@
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="#8A94A6" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#8A94A6" stroke-width="1.6"/></svg>
             </span>
           </div>
-        </div>
 
-        <button type="submit" class="login-btn" id="login-btn">登 录</button>
-      </form>
+          <button type="submit" class="login-btn" id="login-btn">登 录</button>
+        </form>
+      </div>
 
       <div class="agree-row">
         <span class="checkbox off" id="agree-box" onclick="toggleAgree()">
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4.5l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
-        <span>已阅读并同意</span><a href="agreement.html">《用户协议》</a><span>和</span><a href="privacy.html">《隐私协议》</a>
+        <span>我已阅读并同意</span><a href="agreement.html">《用户协议》</a><span>和</span><a href="privacy.html">《隐私协议》</a>
+      </div>
+
+      <div class="slogan">
+        <div class="line1">智慧出行</div>
+        <div class="line2">服务新城</div>
+        <svg class="underline" viewBox="0 0 136 18" preserveAspectRatio="none"><path d="M4 12c28 4 66 6 104-2 14-3 22-6 24-8"/></svg>
       </div>
     </div>
   </div>

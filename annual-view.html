@@ -497,7 +497,6 @@
     /* 年检信息由车辆信息页「年检管理」进入（带 plate）→ 直接返回车辆信息页 */
     var plate = rec && rec.plate ? rec.plate : qs('plate');
     if (plate) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(plate); return; }
-    if (window.history && history.length > 1) { history.back(); return; }
     location.href = 'vehicles.html';
   }
 

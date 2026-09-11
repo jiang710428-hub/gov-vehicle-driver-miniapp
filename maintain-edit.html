@@ -1014,7 +1014,6 @@
   function goBack() {
     /* 编辑页从维修保养记录列表进入：直接返回对应车辆记录列表，不依赖历史栈 */
     if (PLATE) { location.href = 'maintain-records.html?plate=' + encodeURIComponent(PLATE); return; }
-    if (window.history && history.length > 1) { history.back(); return; }
     location.href = 'vehicles.html';
   }
 

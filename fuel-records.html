@@ -473,7 +473,6 @@
     /* 加油记录列表由车辆信息页「加油记录」入口进入（带 plate）；
        直接返回车辆信息页，不依赖浏览器历史栈（直开/预览场景 history 不可靠） */
     if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
-    if (window.history && history.length > 1) { history.back(); return; }
     location.href = 'vehicles.html';
   }
 

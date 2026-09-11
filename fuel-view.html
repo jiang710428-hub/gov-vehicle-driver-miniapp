@@ -548,7 +548,6 @@
   function editRec() { location.href = 'fuel-edit.html?id=' + rec.id; }
   function goBack() {
     if (rec && rec.plate) { location.href = 'fuel-records.html?plate=' + encodeURIComponent(rec.plate); return; }
-    if (window.history && history.length > 1) { history.back(); return; }
     location.href = 'vehicles.html';
   }
 

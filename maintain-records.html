@@ -556,7 +556,6 @@
     /* 维修保养列表由车辆详情「维修保养」入口进入（带 plate）；
        直接返回车辆详情页，不依赖浏览器历史栈 */
     if (PLATE) { location.href = 'vehicle-detail.html?plate=' + encodeURIComponent(PLATE); return; }
-    if (window.history && history.length > 1) { history.back(); return; }
     location.href = 'vehicles.html';
   }
 

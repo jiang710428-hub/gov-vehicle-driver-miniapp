@@ -134,13 +134,22 @@
   .btn:active { transform: scale(0.97); box-shadow: 0 5px 12px rgba(59, 127, 232, .26); }
   .btn:disabled { opacity: .55; cursor: not-allowed; }
 
-  .aux {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 15px; font-size: 13px;
+  .agree {
+    display: flex; align-items: flex-start; gap: 7px;
+    margin-top: 13px; font-size: 12px; line-height: 17px;
+    color: var(--sub); cursor: pointer; user-select: none;
   }
-  .aux a { text-decoration: none; cursor: pointer; }
-  .aux .sms { color: var(--blue); }
-  .aux .forgot { color: #33475C; }
+  .cbox {
+    flex: none; margin-top: 1px;
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 1.5px solid #C4CEDA; background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .cbox.on { border-color: var(--blue); background: var(--blue); }
+  .cbox svg { opacity: 0; transform: scale(.4); transition: all .15s; }
+  .cbox.on svg { opacity: 1; transform: scale(1); }
+  .agree a { color: var(--blue); text-decoration: none; }
 
   .org {
     margin-top: auto;
@@ -180,7 +189,7 @@
       <div class="card">
         <div class="frow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="#8A94A6" stroke-width="1.6"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" stroke="#8A94A6" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <input type="text" id="account" placeholder="用户名/邮箱" autocomplete="off">
+          <input type="text" id="account" placeholder="请输入手机号" autocomplete="off" maxlength="11">
         </div>
 
         <div class="frow">
@@ -198,9 +207,11 @@
 
         <button type="button" class="btn" id="login-btn" onclick="handleLogin()">立即登录</button>
 
-        <div class="aux">
-          <a class="sms" onclick="toast('原型演示：短信登录暂未开放')">短信登录</a>
-          <a class="forgot" onclick="toast('原型演示：请联系管理员重置密码')">忘记密码？</a>
+        <div class="agree" onclick="toggleAgree(event)">
+          <span class="cbox" id="agree-box">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5 10 18 19.5 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span>我已阅读并同意 <a href="agreement.html" onclick="event.stopPropagation()">《用户协议》</a> 和 <a href="privacy.html" onclick="event.stopPropagation()">《隐私协议》</a></span>
         </div>
 
         <div class="org">
@@ -247,8 +258,9 @@
     var account = document.getElementById('account').value.trim();
     var pwd = document.getElementById('pwd').value.trim();
 
-    if (!account) { toast('请输入用户名/邮箱'); return; }
+    if (!account) { toast('请输入手机号'); return; }
     if (!pwd) { toast('请输入密码'); return; }
+    if (!agreed) { toast('请先阅读并同意《用户协议》和《隐私协议》'); return; }
 
     try {
       if (remembered) localStorage.setItem(REM_KEY, account);

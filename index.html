@@ -245,6 +245,13 @@
     document.getElementById('rem-box').classList.toggle('on', remembered);
   }
 
+  var agreed = false;
+  function toggleAgree(e) {
+    if (e && e.target && e.target.tagName === 'A') return;   // 点协议链接不切换勾选
+    agreed = !agreed;
+    document.getElementById('agree-box').classList.toggle('on', agreed);
+  }
+
   function toast(msg) {
     var t = document.getElementById('toast');
     t.textContent = msg;
